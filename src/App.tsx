@@ -1,11 +1,11 @@
 import './App.css'
-import Dashboard from './dashboard'
+import ECAPDashboard from './dashboard'
 
 function App() {
 
   return (
     <>
-      <Dashboard />
+      <ECAPDashboard />
     </>
   )
 }
