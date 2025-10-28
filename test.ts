@@ -83,4 +83,59 @@ describe('OperationalStatusComponent', () => {
     fixture.destroy(); // triggers ngOnDestroy
     expect(scenario.get('operationalStatus')).toBeNull();
   });
+
+  it('should handle null model input gracefully', () => {
+    // Reset component with null model
+    fixture.componentRef.setInput('model', null);
+    component.ngOnInit();
+    
+    const scenario = rootForm.get('scenarioData') as FormGroup;
+    const control = scenario.get('operationalStatus');
+    expect(control?.value).toBe('');
+  });
+
+  it('should handle model with null scenarioData gracefully', () => {
+    // Reset component with model having null scenarioData
+    fixture.componentRef.setInput('model', { scenarioData: null } as FaaNotamModel);
+    component.ngOnInit();
+    
+    const scenario = rootForm.get('scenarioData') as FormGroup;
+    const control = scenario.get('operationalStatus');
+    expect(control?.value).toBe('');
+  });
+
+  it('should handle model with undefined equipmentStatus gracefully', () => {
+    // Reset component with model having undefined equipmentStatus
+    fixture.componentRef.setInput('model', { scenarioData: { equipmentStatus: undefined } } as FaaNotamModel);
+    component.ngOnInit();
+    
+    const scenario = rootForm.get('scenarioData') as FormGroup;
+    const control = scenario.get('operationalStatus');
+    expect(control?.value).toBe('');
+  });
+
+  it('should not add operationalStatus control if it already exists', () => {
+    const scenario = rootForm.get('scenarioData') as FormGroup;
+    const initialControl = scenario.get('operationalStatus');
+    
+    // Call buildForm again
+    component['buildForm']();
+    
+    const afterControl = scenario.get('operationalStatus');
+    expect(afterControl).toBe(initialControl); // Same reference, not recreated
+  });
+
+  it('should handle missing scenarioData form group gracefully', () => {
+    // Create a form without scenarioData
+    const formWithoutScenarioData = new FormGroup({
+      otherData: new FormControl('test')
+    });
+    
+    const formGroupDirective = { form: formWithoutScenarioData } as FormGroupDirective;
+    const testComponent = new OperationalStatusComponent(formGroupDirective, store);
+    
+    // This should not throw an error
+    expect(() => testComponent['buildForm']()).not.toThrow();
+    expect(testComponent['operationalStatusForm']).toBeNull();
+  });
 });
