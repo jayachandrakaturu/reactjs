@@ -67,9 +67,8 @@ describe('OperationalStatusComponent', () => {
   });
 
   it('should patch operationalStatus from input model', () => {
-    // Ensure the component is properly initialized
-    fixture.detectChanges();
-    
+    // The component should already be initialized in beforeEach with the correct model
+    // Just verify the control exists and has the expected value
     const scenario = rootForm.get('scenarioData') as FormGroup;
     const control = scenario.get('operationalStatus');
     
@@ -91,11 +90,10 @@ describe('OperationalStatusComponent', () => {
   });
 
   it('should handle null model input gracefully', () => {
-    // Reset component with null model
-    fixture.componentRef.setInput('model', null);
-    
-    // Trigger change detection to update the component
-    fixture.detectChanges();
+    // Create a fresh component instance with null model
+    const freshFixture = TestBed.createComponent(OperationalStatusComponent);
+    freshFixture.componentRef.setInput('model', null);
+    freshFixture.componentInstance.ngOnInit();
     
     const scenario = rootForm.get('scenarioData') as FormGroup;
     const control = scenario.get('operationalStatus');
@@ -103,28 +101,30 @@ describe('OperationalStatusComponent', () => {
     expect(control).toBeTruthy();
     // The value should be empty string (from the || '' fallback in patching logic)
     expect(control?.value).toBe('');
+    
+    freshFixture.destroy();
   });
 
   it('should handle model with null scenarioData gracefully', () => {
-    // Reset component with model having null scenarioData
-    fixture.componentRef.setInput('model', { scenarioData: null } as unknown as FaaNotamModel);
-    
-    // Trigger change detection to update the component
-    fixture.detectChanges();
+    // Create a fresh component instance with null scenarioData
+    const freshFixture = TestBed.createComponent(OperationalStatusComponent);
+    freshFixture.componentRef.setInput('model', { scenarioData: null } as unknown as FaaNotamModel);
+    freshFixture.componentInstance.ngOnInit();
     
     const scenario = rootForm.get('scenarioData') as FormGroup;
     const control = scenario.get('operationalStatus');
     // The control should still exist and have its default value
     expect(control).toBeTruthy();
     expect(control?.value).toBe('');
+    
+    freshFixture.destroy();
   });
 
   it('should handle model with undefined equipmentStatus gracefully', () => {
-    // Reset component with model having undefined equipmentStatus
-    fixture.componentRef.setInput('model', { scenarioData: { equipmentStatus: undefined } } as unknown as FaaNotamModel);
-    
-    // Trigger change detection to update the component
-    fixture.detectChanges();
+    // Create a fresh component instance with undefined equipmentStatus
+    const freshFixture = TestBed.createComponent(OperationalStatusComponent);
+    freshFixture.componentRef.setInput('model', { scenarioData: { equipmentStatus: undefined } } as unknown as FaaNotamModel);
+    freshFixture.componentInstance.ngOnInit();
     
     const scenario = rootForm.get('scenarioData') as FormGroup;
     const control = scenario.get('operationalStatus');
@@ -132,6 +132,8 @@ describe('OperationalStatusComponent', () => {
     expect(control).toBeTruthy();
     // The value should be empty string (from the || '' fallback in patching logic)
     expect(control?.value).toBe('');
+    
+    freshFixture.destroy();
   });
 
   it('should not add operationalStatus control if it already exists', () => {
