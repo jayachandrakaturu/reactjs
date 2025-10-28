@@ -96,7 +96,7 @@ describe('OperationalStatusComponent', () => {
 
   it('should handle model with null scenarioData gracefully', () => {
     // Reset component with model having null scenarioData
-    fixture.componentRef.setInput('model', { scenarioData: null } as FaaNotamModel);
+    fixture.componentRef.setInput('model', { scenarioData: null } as unknown as FaaNotamModel);
     component.ngOnInit();
     
     const scenario = rootForm.get('scenarioData') as FormGroup;
@@ -106,7 +106,7 @@ describe('OperationalStatusComponent', () => {
 
   it('should handle model with undefined equipmentStatus gracefully', () => {
     // Reset component with model having undefined equipmentStatus
-    fixture.componentRef.setInput('model', { scenarioData: { equipmentStatus: undefined } } as FaaNotamModel);
+    fixture.componentRef.setInput('model', { scenarioData: { equipmentStatus: undefined } } as unknown as FaaNotamModel);
     component.ngOnInit();
     
     const scenario = rootForm.get('scenarioData') as FormGroup;
