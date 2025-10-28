@@ -40,7 +40,11 @@ describe('OperationalStatusComponent', () => {
     fixture = TestBed.createComponent(OperationalStatusComponent);
     component = fixture.componentInstance;
 
-    component.model.set({ scenarioData: { equipmentStatus: 'OP' } } as FaaNotamModel);
+    // Set the input signal via ComponentRef.setInput before first detectChanges
+    fixture.componentRef.setInput('model', {
+      scenarioData: { equipmentStatus: 'OP' },
+    } as FaaNotamModel);
+
     fixture.detectChanges(); // triggers ngOnInit
   });
 
