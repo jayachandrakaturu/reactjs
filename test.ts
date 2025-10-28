@@ -66,9 +66,9 @@ describe('OperationalStatusComponent', () => {
     expect(control?.valid).toBeTrue();
   });
 
-  it('should patch equipmentStatus from input model', () => {
+  it('should patch operationalStatus from input model', () => {
     const scenario = rootForm.get('scenarioData') as FormGroup;
-    expect(scenario.get('equipmentStatus')?.value).toBe('OP');
+    expect(scenario.get('operationalStatus')?.value).toBe('OP');
   });
 
   it('should wire operationalStatus$ and fetch options on init', async () => {
