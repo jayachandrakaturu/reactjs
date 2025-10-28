@@ -19,7 +19,7 @@ describe('OperationalStatusComponent', () => {
         { key: 'MAINTENANCE', value: 'Under Maintenance' }
     ]
 
-    const createMockModel = (scenarioData: any = null): FaaNotamModel => ({
+    const createMockModel = (scenarioData: { equipmentStatus?: string | null; operationalStatus?: string; note?: string; observationTime?: string; protectiveBarrier?: string; freeTextNotes?: string } | null = null): FaaNotamModel => ({
         notamId: 'test-id',
         scenarioData
     } as unknown as FaaNotamModel)
@@ -96,7 +96,7 @@ describe('OperationalStatusComponent', () => {
             fixture.componentRef.setInput('model', mockModel)
             fixture.detectChanges()
             
-            const scenarioDataControl = parentFormGroup.get('scenarioData') as FormGroup
+            const scenarioDataControl = component['operationalStatusForm'] as FormGroup
             const operationalStatusControl = scenarioDataControl.get('operationalStatus')
             
             expect(operationalStatusControl?.value).toBe('ACTIVE')
@@ -114,7 +114,7 @@ describe('OperationalStatusComponent', () => {
             fixture.componentRef.setInput('model', mockModel)
             fixture.detectChanges()
             
-            const scenarioDataControl = parentFormGroup.get('scenarioData') as FormGroup
+            const scenarioDataControl = component['operationalStatusForm'] as FormGroup
             const operationalStatusControl = scenarioDataControl.get('operationalStatus')
             
             expect(operationalStatusControl?.value).toBe('')
@@ -125,7 +125,7 @@ describe('OperationalStatusComponent', () => {
             fixture.componentRef.setInput('model', mockModel)
             fixture.detectChanges()
             
-            const scenarioDataControl = parentFormGroup.get('scenarioData') as FormGroup
+            const scenarioDataControl = component['operationalStatusForm'] as FormGroup
             const operationalStatusControl = scenarioDataControl.get('operationalStatus')
             
             expect(operationalStatusControl?.value).toBe('')
@@ -133,7 +133,7 @@ describe('OperationalStatusComponent', () => {
 
         it('should not patch form when operationalStatusForm is null', () => {
             // Access private property for testing
-            component['operationalStatusForm'] = null as any
+            component['operationalStatusForm'] = null as unknown as FormGroup
             
             const mockModel = createMockModel({ equipmentStatus: 'ACTIVE' })
             fixture.componentRef.setInput('model', mockModel)
@@ -142,7 +142,7 @@ describe('OperationalStatusComponent', () => {
         })
 
         it('should not patch form when operationalStatus control does not exist', () => {
-            const scenarioDataControl = parentFormGroup.get('scenarioData') as FormGroup
+            const scenarioDataControl = component['operationalStatusForm'] as FormGroup
             scenarioDataControl.removeControl('operationalStatus')
             
             const mockModel = createMockModel({ equipmentStatus: 'ACTIVE' })
@@ -157,7 +157,7 @@ describe('OperationalStatusComponent', () => {
             fixture.componentRef.setInput('model', createMockModel())
             fixture.detectChanges()
             
-            const scenarioDataControl = parentFormGroup.get('scenarioData') as FormGroup
+            const scenarioDataControl = component['operationalStatusForm'] as FormGroup
             const operationalStatusControl = scenarioDataControl.get('operationalStatus')
             
             expect(operationalStatusControl).toBeTruthy()
@@ -166,7 +166,7 @@ describe('OperationalStatusComponent', () => {
         })
 
         it('should not add control if it already exists', () => {
-            const scenarioDataControl = parentFormGroup.get('scenarioData') as FormGroup
+            const scenarioDataControl = component['operationalStatusForm'] as FormGroup
             scenarioDataControl.addControl('operationalStatus', new FormControl('existing'))
             
             fixture.componentRef.setInput('model', createMockModel())
@@ -213,7 +213,7 @@ describe('OperationalStatusComponent', () => {
             fixture.componentRef.setInput('model', createMockModel())
             fixture.detectChanges()
             
-            const scenarioDataControl = parentFormGroup.get('scenarioData') as FormGroup
+            const scenarioDataControl = component['operationalStatusForm'] as FormGroup
             expect(scenarioDataControl.get('operationalStatus')).toBeTruthy()
             
             component.ngOnDestroy()
@@ -222,14 +222,14 @@ describe('OperationalStatusComponent', () => {
         })
 
         it('should handle destroy when operationalStatus control does not exist', () => {
-            const scenarioDataControl = parentFormGroup.get('scenarioData') as FormGroup
+            const scenarioDataControl = component['operationalStatusForm'] as FormGroup
             scenarioDataControl.removeControl('operationalStatus')
             
             expect(() => component.ngOnDestroy()).not.toThrow()
         })
 
         it('should handle destroy when operationalStatusForm is null', () => {
-            component['operationalStatusForm'] = null as any
+            component['operationalStatusForm'] = null as unknown as FormGroup
             
             expect(() => component.ngOnDestroy()).not.toThrow()
         })
@@ -255,9 +255,15 @@ describe('OperationalStatusComponent', () => {
             fixture.componentRef.setInput('model', createMockModel())
             fixture.detectChanges()
             
-            const scenarioDataControl = parentFormGroup.get('scenarioData') as FormGroup
-            const operationalStatusControl = scenarioDataControl.get('operationalStatus')
+            // Ensure the form is properly initialized
+            expect(component['operationalStatusForm']).toBeTruthy()
             
+            // Get the scenarioData control from the component's operationalStatusForm
+            const scenarioDataControl = component['operationalStatusForm'] as FormGroup
+            expect(scenarioDataControl).toBeTruthy()
+            
+            // The operationalStatus control should be added by the component's buildForm method
+            const operationalStatusControl = scenarioDataControl.get('operationalStatus')
             expect(operationalStatusControl).toBeTruthy()
             expect(operationalStatusControl?.value).toBe('')
             expect(operationalStatusControl?.hasError('required')).toBeTruthy()
@@ -267,7 +273,7 @@ describe('OperationalStatusComponent', () => {
             fixture.componentRef.setInput('model', createMockModel())
             fixture.detectChanges()
             
-            const scenarioDataControl = parentFormGroup.get('scenarioData') as FormGroup
+            const scenarioDataControl = component['operationalStatusForm'] as FormGroup
             const operationalStatusControl = scenarioDataControl.get('operationalStatus')
             
             operationalStatusControl?.setValue('OPERATIONAL')
@@ -282,7 +288,7 @@ describe('OperationalStatusComponent', () => {
             fixture.componentRef.setInput('model', createMockModel())
             fixture.detectChanges()
             
-            const scenarioDataControl = parentFormGroup.get('scenarioData') as FormGroup
+            const scenarioDataControl = component['operationalStatusForm'] as FormGroup
             const operationalStatusControl = scenarioDataControl.get('operationalStatus')
             
             operationalStatusControl?.setValue('OPERATIONAL')
@@ -297,7 +303,7 @@ describe('OperationalStatusComponent', () => {
             fixture.componentRef.setInput('model', createMockModel())
             fixture.detectChanges()
             
-            const scenarioDataControl = parentFormGroup.get('scenarioData') as FormGroup
+            const scenarioDataControl = component['operationalStatusForm'] as FormGroup
             const operationalStatusControl = scenarioDataControl.get('operationalStatus')
             
             // Initially should be invalid (required)
@@ -321,7 +327,7 @@ describe('OperationalStatusComponent', () => {
             fixture.componentRef.setInput('model', createMockModel())
             fixture.detectChanges()
             
-            let emittedValues: any[] = []
+            let emittedValues: KeyValueModel[] = []
             const subscription = component.operationalStatus$.subscribe(value => {
                 emittedValues.push(value)
             })
@@ -401,7 +407,7 @@ describe('OperationalStatusComponent', () => {
             fixture.componentRef.setInput('model', complexModel)
             fixture.detectChanges()
             
-            const scenarioDataControl = parentFormGroup.get('scenarioData') as FormGroup
+            const scenarioDataControl = component['operationalStatusForm'] as FormGroup
             const operationalStatusControl = scenarioDataControl.get('operationalStatus')
             
             expect(operationalStatusControl?.value).toBe('ACTIVE')
@@ -412,7 +418,7 @@ describe('OperationalStatusComponent', () => {
             fixture.componentRef.setInput('model', emptyModel)
             fixture.detectChanges()
             
-            const scenarioDataControl = parentFormGroup.get('scenarioData') as FormGroup
+            const scenarioDataControl = component['operationalStatusForm'] as FormGroup
             const operationalStatusControl = scenarioDataControl.get('operationalStatus')
             
             expect(operationalStatusControl?.value).toBe('')
@@ -422,7 +428,7 @@ describe('OperationalStatusComponent', () => {
             fixture.componentRef.setInput('model', createMockModel())
             fixture.detectChanges()
             
-            const scenarioDataControl = parentFormGroup.get('scenarioData') as FormGroup
+            const scenarioDataControl = component['operationalStatusForm'] as FormGroup
             expect(scenarioDataControl.get('operationalStatus')).toBeTruthy()
             
             component.ngOnDestroy()
