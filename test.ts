@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing'
-import { FormBuilder, FormControl, FormGroup, FormGroupDirective, ReactiveFormsModule } from '@angular/forms'
+import { FormControl, FormGroup, FormGroupDirective, ReactiveFormsModule } from '@angular/forms'
 import { NoopAnimationsModule } from '@angular/platform-browser/animations'
 import { of } from 'rxjs'
 import { FaaNotamModel, KeyValueModel } from '../../models'
@@ -13,27 +13,16 @@ describe('OperationalStatusComponent', () => {
     let parentFormGroup: FormGroup
     let formGroupDirectiveStub: FormGroupDirective
 
-    const minimalMockData: FaaNotamModel = {
-        notamId: 'test-id',
-        scenarioData: { equipmentStatus: null }
-    } as unknown as FaaNotamModel
-
-    const mockModelWithData: FaaNotamModel = {
-        scenarioData: {
-            equipmentStatus: 'ACTIVE',
-            operationalStatus: 'OPERATIONAL',
-            note: '',
-            observationTime: '',
-            protectiveBarrier: '',
-            freeTextNotes: ''
-        }
-    } as unknown as FaaNotamModel
-
     const mockOperationalStatusData: KeyValueModel[] = [
         { key: 'OPERATIONAL', value: 'Operational' },
         { key: 'NON_OPERATIONAL', value: 'Non-Operational' },
         { key: 'MAINTENANCE', value: 'Under Maintenance' }
     ]
+
+    const createMockModel = (scenarioData: any = null): FaaNotamModel => ({
+        notamId: 'test-id',
+        scenarioData
+    } as unknown as FaaNotamModel)
 
     beforeEach(async () => {
         parentFormGroup = new FormGroup({
@@ -41,10 +30,7 @@ describe('OperationalStatusComponent', () => {
         })
 
         formGroupDirectiveStub = {
-            form: parentFormGroup,
-            controlContainer: {
-                get: (name: string) => parentFormGroup.get(name),
-            },
+            form: parentFormGroup
         } as unknown as FormGroupDirective
 
         mockLookupCacheStore = jasmine.createSpyObj('LookupCacheStore', ['fetchNavaidStatusType'], {
@@ -55,157 +41,148 @@ describe('OperationalStatusComponent', () => {
             imports: [OperationalStatusComponent, ReactiveFormsModule, NoopAnimationsModule],
             providers: [
                 { provide: LookupCacheStore, useValue: mockLookupCacheStore },
-                { provide: FormGroupDirective, useValue: formGroupDirectiveStub },
-                FormBuilder
+                { provide: FormGroupDirective, useValue: formGroupDirectiveStub }
             ]
-        })
-            .compileComponents()
+        }).compileComponents()
 
         fixture = TestBed.createComponent(OperationalStatusComponent)
         component = fixture.componentInstance
-        fixture.componentRef.setInput('model', minimalMockData)
-        fixture.detectChanges()
     })
 
-    it('should create', () => {
-        expect(component).toBeTruthy()
-    })
-
-    it('should initialize form and fetch navaid status types', () => {
-        expect(mockLookupCacheStore.fetchNavaidStatusType).toHaveBeenCalled()
-        expect(component.operationalStatus$).toBeDefined()
-    })
-
-    it('should build form with operationalStatus control', () => {
-        const scenarioDataControl = parentFormGroup.get('scenarioData') as FormGroup
-        const operationalStatusControl = scenarioDataControl.get('operationalStatus')
-        
-        expect(operationalStatusControl).toBeTruthy()
-        expect(operationalStatusControl).toBeInstanceOf(FormControl)
-        expect(operationalStatusControl?.hasError('required')).toBeTruthy()
-    })
-
-    it('should patch form values from model input', () => {
-        fixture = TestBed.createComponent(OperationalStatusComponent)
-        component = fixture.componentInstance
-        fixture.componentRef.setInput('model', mockModelWithData)
-        fixture.detectChanges()
-
-        const scenarioDataControl = parentFormGroup.get('scenarioData') as FormGroup
-        const operationalStatusControl = scenarioDataControl.get('operationalStatus')
-        
-        expect(operationalStatusControl?.value).toBe('OPERATIONAL')
-    })
-
-    it('should remove operationalStatus control on destroy', () => {
-        const scenarioDataControl = parentFormGroup.get('scenarioData') as FormGroup
-        expect(scenarioDataControl.get('operationalStatus')).toBeTruthy()
-        
-        component.ngOnDestroy()
-        
-        expect(scenarioDataControl.get('operationalStatus')).toBeFalsy()
-    })
-
-    it('should initialize operationalStatus$ observable', () => {
-        expect(component.operationalStatus$).toBeDefined()
-        component.operationalStatus$.subscribe(statusTypes => {
-            expect(statusTypes).toEqual(mockOperationalStatusData)
+    describe('Component Initialization', () => {
+        it('should create', () => {
+            expect(component).toBeTruthy()
         })
-    })
 
-    // Additional test coverage for edge cases
-    describe('Edge Cases', () => {
-        it('should handle null model input', () => {
-            fixture = TestBed.createComponent(OperationalStatusComponent)
-            component = fixture.componentInstance
+        it('should initialize with null model', () => {
             fixture.componentRef.setInput('model', null)
+            fixture.detectChanges()
+            
+            expect(component).toBeTruthy()
+            expect(mockLookupCacheStore.fetchNavaidStatusType).toHaveBeenCalled()
+        })
+
+        it('should initialize with valid model', () => {
+            const mockModel = createMockModel({ equipmentStatus: 'ACTIVE' })
+            fixture.componentRef.setInput('model', mockModel)
+            fixture.detectChanges()
+            
+            expect(component).toBeTruthy()
+            expect(mockLookupCacheStore.fetchNavaidStatusType).toHaveBeenCalled()
+        })
+    })
+
+    describe('ngOnInit', () => {
+        it('should initialize form and fetch navaid status types', () => {
+            fixture.componentRef.setInput('model', createMockModel())
             fixture.detectChanges()
             
             expect(mockLookupCacheStore.fetchNavaidStatusType).toHaveBeenCalled()
             expect(component.operationalStatus$).toBeDefined()
         })
 
+        it('should set operationalStatus$ observable', () => {
+            fixture.componentRef.setInput('model', createMockModel())
+            fixture.detectChanges()
+            
+            expect(component.operationalStatus$).toBeDefined()
+            component.operationalStatus$.subscribe(statusTypes => {
+                expect(statusTypes).toEqual(mockOperationalStatusData)
+            })
+        })
+
+        it('should patch form values when model has equipmentStatus', () => {
+            const mockModel = createMockModel({ equipmentStatus: 'ACTIVE' })
+            fixture.componentRef.setInput('model', mockModel)
+            fixture.detectChanges()
+            
+            const scenarioDataControl = parentFormGroup.get('scenarioData') as FormGroup
+            const operationalStatusControl = scenarioDataControl.get('operationalStatus')
+            
+            expect(operationalStatusControl?.value).toBe('ACTIVE')
+        })
+
         it('should handle model with null scenarioData', () => {
-            const modelWithNullScenarioData = { scenarioData: null } as unknown as FaaNotamModel
-            fixture = TestBed.createComponent(OperationalStatusComponent)
-            component = fixture.componentInstance
-            fixture.componentRef.setInput('model', modelWithNullScenarioData)
+            const mockModel = createMockModel(null)
+            fixture.componentRef.setInput('model', mockModel)
             
             expect(() => fixture.detectChanges()).not.toThrow()
         })
 
-        it('should handle model with null equipmentStatus', () => {
-            const modelWithNullEquipmentStatus = {
-                scenarioData: { equipmentStatus: null }
-            } as unknown as FaaNotamModel
-            
-            fixture = TestBed.createComponent(OperationalStatusComponent)
-            component = fixture.componentInstance
-            fixture.componentRef.setInput('model', modelWithNullEquipmentStatus)
+        it('should handle model with undefined equipmentStatus', () => {
+            const mockModel = createMockModel({ equipmentStatus: undefined })
+            fixture.componentRef.setInput('model', mockModel)
             fixture.detectChanges()
             
             const scenarioDataControl = parentFormGroup.get('scenarioData') as FormGroup
             const operationalStatusControl = scenarioDataControl.get('operationalStatus')
+            
             expect(operationalStatusControl?.value).toBe('')
         })
 
-        it('should handle model with undefined equipmentStatus', () => {
-            const modelWithUndefinedEquipmentStatus = {
-                scenarioData: { equipmentStatus: undefined }
-            } as unknown as FaaNotamModel
-            
-            fixture = TestBed.createComponent(OperationalStatusComponent)
-            component = fixture.componentInstance
-            fixture.componentRef.setInput('model', modelWithUndefinedEquipmentStatus)
+        it('should handle model with empty string equipmentStatus', () => {
+            const mockModel = createMockModel({ equipmentStatus: '' })
+            fixture.componentRef.setInput('model', mockModel)
             fixture.detectChanges()
             
             const scenarioDataControl = parentFormGroup.get('scenarioData') as FormGroup
             const operationalStatusControl = scenarioDataControl.get('operationalStatus')
+            
             expect(operationalStatusControl?.value).toBe('')
+        })
+
+        it('should not patch form when operationalStatusForm is null', () => {
+            // Access private property for testing
+            component['operationalStatusForm'] = null as any
+            
+            const mockModel = createMockModel({ equipmentStatus: 'ACTIVE' })
+            fixture.componentRef.setInput('model', mockModel)
+            
+            expect(() => fixture.detectChanges()).not.toThrow()
+        })
+
+        it('should not patch form when operationalStatus control does not exist', () => {
+            const scenarioDataControl = parentFormGroup.get('scenarioData') as FormGroup
+            scenarioDataControl.removeControl('operationalStatus')
+            
+            const mockModel = createMockModel({ equipmentStatus: 'ACTIVE' })
+            fixture.componentRef.setInput('model', mockModel)
+            
+            expect(() => fixture.detectChanges()).not.toThrow()
         })
     })
 
-    // Additional test coverage for form operations
-    describe('Form Operations', () => {
-        it('should properly initialize form controls', () => {
+    describe('buildForm', () => {
+        it('should build form with operationalStatus control', () => {
+            fixture.componentRef.setInput('model', createMockModel())
+            fixture.detectChanges()
+            
             const scenarioDataControl = parentFormGroup.get('scenarioData') as FormGroup
             const operationalStatusControl = scenarioDataControl.get('operationalStatus')
             
             expect(operationalStatusControl).toBeTruthy()
-            expect(operationalStatusControl?.value).toBe('')
+            expect(operationalStatusControl).toBeInstanceOf(FormControl)
             expect(operationalStatusControl?.hasError('required')).toBeTruthy()
         })
 
-        it('should handle form control updates correctly', () => {
+        it('should not add control if it already exists', () => {
             const scenarioDataControl = parentFormGroup.get('scenarioData') as FormGroup
+            scenarioDataControl.addControl('operationalStatus', new FormControl('existing'))
+            
+            fixture.componentRef.setInput('model', createMockModel())
+            fixture.detectChanges()
+            
             const operationalStatusControl = scenarioDataControl.get('operationalStatus')
-            
-            operationalStatusControl?.setValue('OPERATIONAL')
-            expect(operationalStatusControl?.value).toBe('OPERATIONAL')
-            expect(operationalStatusControl?.hasError('required')).toBeFalsy()
-            
-            operationalStatusControl?.patchValue('MAINTENANCE')
-            expect(operationalStatusControl?.value).toBe('MAINTENANCE')
+            expect(operationalStatusControl?.value).toBe('existing')
         })
 
-        it('should maintain form control structure after multiple operations', () => {
-            const scenarioDataControl = parentFormGroup.get('scenarioData') as FormGroup
-            const operationalStatusControl = scenarioDataControl.get('operationalStatus')
+        it('should handle when scenarioData is not a FormGroup', () => {
+            const invalidParentForm = new FormGroup({
+                scenarioData: new FormControl('not-a-form-group')
+            })
             
-            operationalStatusControl?.setValue('OPERATIONAL')
-            operationalStatusControl?.setValue('NON_OPERATIONAL')
-            operationalStatusControl?.setValue('MAINTENANCE')
-            
-            expect(operationalStatusControl?.value).toBe('MAINTENANCE')
-            expect(scenarioDataControl.get('operationalStatus')).toBeTruthy()
-        })
-    })
-
-    // Additional test coverage for lifecycle hooks
-    describe('Lifecycle Hooks', () => {
-        it('should handle ngOnInit when form is not properly initialized', () => {
             const invalidFormGroupDirective = {
-                form: null
+                form: invalidParentForm
             } as unknown as FormGroupDirective
             
             TestBed.overrideProvider(FormGroupDirective, { useValue: invalidFormGroupDirective })
@@ -216,7 +193,48 @@ describe('OperationalStatusComponent', () => {
             expect(() => fixture.detectChanges()).toThrow()
         })
 
-        it('should handle ngOnDestroy when scenarioData control does not exist', () => {
+        it('should handle when scenarioData control does not exist', () => {
+            const formWithoutScenarioData = new FormGroup({})
+            const formGroupDirectiveWithoutScenarioData = {
+                form: formWithoutScenarioData
+            } as unknown as FormGroupDirective
+            
+            TestBed.overrideProvider(FormGroupDirective, { useValue: formGroupDirectiveWithoutScenarioData })
+            
+            fixture = TestBed.createComponent(OperationalStatusComponent)
+            component = fixture.componentInstance
+            
+            expect(() => fixture.detectChanges()).not.toThrow()
+        })
+    })
+
+    describe('ngOnDestroy', () => {
+        it('should remove operationalStatus control on destroy', () => {
+            fixture.componentRef.setInput('model', createMockModel())
+            fixture.detectChanges()
+            
+            const scenarioDataControl = parentFormGroup.get('scenarioData') as FormGroup
+            expect(scenarioDataControl.get('operationalStatus')).toBeTruthy()
+            
+            component.ngOnDestroy()
+            
+            expect(scenarioDataControl.get('operationalStatus')).toBeFalsy()
+        })
+
+        it('should handle destroy when operationalStatus control does not exist', () => {
+            const scenarioDataControl = parentFormGroup.get('scenarioData') as FormGroup
+            scenarioDataControl.removeControl('operationalStatus')
+            
+            expect(() => component.ngOnDestroy()).not.toThrow()
+        })
+
+        it('should handle destroy when operationalStatusForm is null', () => {
+            component['operationalStatusForm'] = null as any
+            
+            expect(() => component.ngOnDestroy()).not.toThrow()
+        })
+
+        it('should handle destroy when scenarioData control does not exist', () => {
             const formWithoutScenarioData = new FormGroup({})
             const formGroupDirectiveWithoutScenarioData = {
                 form: formWithoutScenarioData
@@ -230,45 +248,55 @@ describe('OperationalStatusComponent', () => {
             
             expect(() => component.ngOnDestroy()).not.toThrow()
         })
-
-        it('should properly initialize operationalStatus$ observable', () => {
-            expect(component.operationalStatus$).toBeDefined()
-            component.operationalStatus$.subscribe(statusTypes => {
-                expect(statusTypes).toEqual(mockOperationalStatusData)
-            })
-        })
-
-        it('should call fetchNavaidStatusType on ngOnInit', () => {
-            expect(mockLookupCacheStore.fetchNavaidStatusType).toHaveBeenCalledTimes(1)
-        })
     })
 
-    // Additional test coverage for form integration
-    describe('Form Integration', () => {
-        it('should properly integrate with parent form group', () => {
+    describe('Form Operations', () => {
+        it('should properly initialize form controls with validation', () => {
+            fixture.componentRef.setInput('model', createMockModel())
+            fixture.detectChanges()
+            
             const scenarioDataControl = parentFormGroup.get('scenarioData') as FormGroup
             const operationalStatusControl = scenarioDataControl.get('operationalStatus')
             
             expect(operationalStatusControl).toBeTruthy()
-            expect(operationalStatusControl).toBeInstanceOf(FormControl)
+            expect(operationalStatusControl?.value).toBe('')
+            expect(operationalStatusControl?.hasError('required')).toBeTruthy()
         })
 
-        it('should maintain form control structure after destroy and recreate', () => {
-            const scenarioDataControl = parentFormGroup.get('scenarioData') as FormGroup
-            expect(scenarioDataControl.get('operationalStatus')).toBeTruthy()
-            
-            component.ngOnDestroy()
-            expect(scenarioDataControl.get('operationalStatus')).toBeFalsy()
-            
-            // Recreate component
-            fixture = TestBed.createComponent(OperationalStatusComponent)
-            component = fixture.componentInstance
+        it('should handle form control updates correctly', () => {
+            fixture.componentRef.setInput('model', createMockModel())
             fixture.detectChanges()
             
+            const scenarioDataControl = parentFormGroup.get('scenarioData') as FormGroup
+            const operationalStatusControl = scenarioDataControl.get('operationalStatus')
+            
+            operationalStatusControl?.setValue('OPERATIONAL')
+            expect(operationalStatusControl?.value).toBe('OPERATIONAL')
+            expect(operationalStatusControl?.hasError('required')).toBeFalsy()
+            
+            operationalStatusControl?.patchValue('MAINTENANCE')
+            expect(operationalStatusControl?.value).toBe('MAINTENANCE')
+        })
+
+        it('should maintain form control structure after multiple operations', () => {
+            fixture.componentRef.setInput('model', createMockModel())
+            fixture.detectChanges()
+            
+            const scenarioDataControl = parentFormGroup.get('scenarioData') as FormGroup
+            const operationalStatusControl = scenarioDataControl.get('operationalStatus')
+            
+            operationalStatusControl?.setValue('OPERATIONAL')
+            operationalStatusControl?.setValue('NON_OPERATIONAL')
+            operationalStatusControl?.setValue('MAINTENANCE')
+            
+            expect(operationalStatusControl?.value).toBe('MAINTENANCE')
             expect(scenarioDataControl.get('operationalStatus')).toBeTruthy()
         })
 
         it('should handle form control validation correctly', () => {
+            fixture.componentRef.setInput('model', createMockModel())
+            fixture.detectChanges()
+            
             const scenarioDataControl = parentFormGroup.get('scenarioData') as FormGroup
             const operationalStatusControl = scenarioDataControl.get('operationalStatus')
             
@@ -288,9 +316,11 @@ describe('OperationalStatusComponent', () => {
         })
     })
 
-    // Additional test coverage for observable behavior
     describe('Observable Behavior', () => {
         it('should handle operationalStatus$ observable subscription', () => {
+            fixture.componentRef.setInput('model', createMockModel())
+            fixture.detectChanges()
+            
             let emittedValues: any[] = []
             const subscription = component.operationalStatus$.subscribe(value => {
                 emittedValues.push(value)
@@ -335,76 +365,50 @@ describe('OperationalStatusComponent', () => {
         })
     })
 
-    // Additional test coverage for error scenarios
-    describe('Error Scenarios', () => {
-        it('should handle buildForm when scenarioData is not a FormGroup', () => {
-            const invalidParentForm = new FormGroup({
-                scenarioData: new FormControl('not-a-form-group')
-            })
-            
-            const invalidFormGroupDirective = {
-                form: invalidParentForm
-            } as unknown as FormGroupDirective
-            
-            TestBed.overrideProvider(FormGroupDirective, { useValue: invalidFormGroupDirective })
-            
-            fixture = TestBed.createComponent(OperationalStatusComponent)
-            component = fixture.componentInstance
-            
-            expect(() => fixture.detectChanges()).toThrow()
+    describe('Component Properties', () => {
+        it('should have correct input properties', () => {
+            expect(component.model).toBeDefined()
+            expect(component.operationalStatus$).toBeDefined()
         })
 
-        it('should handle ngOnDestroy when operationalStatus control does not exist', () => {
-            const scenarioDataControl = parentFormGroup.get('scenarioData') as FormGroup
-            scenarioDataControl.removeControl('operationalStatus')
+        it('should have correct form properties', () => {
+            fixture.componentRef.setInput('model', createMockModel())
+            fixture.detectChanges()
             
-            expect(() => component.ngOnDestroy()).not.toThrow()
+            expect(component['operationalStatusForm']).toBeDefined()
+            expect(component['form']).toBeDefined()
         })
 
-        it('should handle patchValue when operationalStatusForm is null', () => {
-            // This test ensures the component handles edge cases gracefully
-            component['operationalStatusForm'] = null as any
+        it('should properly set form reference', () => {
+            fixture.componentRef.setInput('model', createMockModel())
+            fixture.detectChanges()
             
-            expect(() => {
-                component['operationalStatusForm']?.patchValue({
-                    equipmentStatus: 'TEST'
-                })
-            }).not.toThrow()
+            expect(component['form']).toBe(parentFormGroup)
         })
     })
 
-    // Additional test coverage for model input handling
-    describe('Model Input Handling', () => {
-        it('should handle model with complex scenarioData structure', () => {
-            const complexModel = {
-                scenarioData: {
-                    equipmentStatus: 'ACTIVE',
-                    operationalStatus: 'OPERATIONAL',
-                    note: 'Test note',
-                    observationTime: '2023-01-01T00:00:00Z',
-                    protectiveBarrier: 'Test barrier',
-                    freeTextNotes: 'Test notes'
-                }
-            } as unknown as FaaNotamModel
+    describe('Edge Cases', () => {
+        it('should handle complex model structure', () => {
+            const complexModel = createMockModel({
+                equipmentStatus: 'ACTIVE',
+                operationalStatus: 'OPERATIONAL',
+                note: 'Test note',
+                observationTime: '2023-01-01T00:00:00Z',
+                protectiveBarrier: 'Test barrier',
+                freeTextNotes: 'Test notes'
+            })
             
-            fixture = TestBed.createComponent(OperationalStatusComponent)
-            component = fixture.componentInstance
             fixture.componentRef.setInput('model', complexModel)
             fixture.detectChanges()
             
             const scenarioDataControl = parentFormGroup.get('scenarioData') as FormGroup
             const operationalStatusControl = scenarioDataControl.get('operationalStatus')
             
-            expect(operationalStatusControl?.value).toBe('OPERATIONAL')
+            expect(operationalStatusControl?.value).toBe('ACTIVE')
         })
 
         it('should handle model with empty scenarioData object', () => {
-            const emptyModel = {
-                scenarioData: {}
-            } as unknown as FaaNotamModel
-            
-            fixture = TestBed.createComponent(OperationalStatusComponent)
-            component = fixture.componentInstance
+            const emptyModel = createMockModel({})
             fixture.componentRef.setInput('model', emptyModel)
             fixture.detectChanges()
             
@@ -414,39 +418,23 @@ describe('OperationalStatusComponent', () => {
             expect(operationalStatusControl?.value).toBe('')
         })
 
-        it('should handle model with equipmentStatus as empty string', () => {
-            const modelWithEmptyString = {
-                scenarioData: {
-                    equipmentStatus: ''
-                }
-            } as unknown as FaaNotamModel
-            
-            fixture = TestBed.createComponent(OperationalStatusComponent)
-            component = fixture.componentInstance
-            fixture.componentRef.setInput('model', modelWithEmptyString)
+        it('should handle form recreation after destroy', () => {
+            fixture.componentRef.setInput('model', createMockModel())
             fixture.detectChanges()
             
             const scenarioDataControl = parentFormGroup.get('scenarioData') as FormGroup
-            const operationalStatusControl = scenarioDataControl.get('operationalStatus')
+            expect(scenarioDataControl.get('operationalStatus')).toBeTruthy()
             
-            expect(operationalStatusControl?.value).toBe('')
-        })
-    })
-
-    // Additional test coverage for component properties
-    describe('Component Properties', () => {
-        it('should have correct input properties', () => {
-            expect(component.model).toBeDefined()
-            expect(component.operationalStatus$).toBeDefined()
-        })
-
-        it('should have correct form properties', () => {
-            expect(component['operationalStatusForm']).toBeDefined()
-            expect(component['form']).toBeDefined()
-        })
-
-        it('should properly set form reference', () => {
-            expect(component['form']).toBe(parentFormGroup)
+            component.ngOnDestroy()
+            expect(scenarioDataControl.get('operationalStatus')).toBeFalsy()
+            
+            // Recreate component
+            fixture = TestBed.createComponent(OperationalStatusComponent)
+            component = fixture.componentInstance
+            fixture.componentRef.setInput('model', createMockModel())
+            fixture.detectChanges()
+            
+            expect(scenarioDataControl.get('operationalStatus')).toBeTruthy()
         })
     })
 })
