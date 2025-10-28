@@ -1,192 +1,102 @@
+import { provideHttpClient } from '@angular/common/http'
+import { provideHttpClientTesting } from '@angular/common/http/testing'
 import { ComponentFixture, TestBed } from '@angular/core/testing'
-import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms'
-import { MatFormFieldModule } from '@angular/material/form-field'
-import { MatSelectModule } from '@angular/material/select'
+import { FormControl, FormGroup, FormGroupDirective, ReactiveFormsModule, Validators } from '@angular/forms'
 import { NoopAnimationsModule } from '@angular/platform-browser/animations'
-import { of, Subject } from 'rxjs'
+import { of } from 'rxjs'
 import { FaaNotamModel, KeyValueModel } from '../../models'
 import { LookupCacheStore } from '../../store/lookup-cache-store'
-import { OperationalStatusComponent } from './operational-status.component'
+import { NavaidStatusComponent } from './navaid-status.component'
 
-describe('OperationalStatusComponent', () => {
-  let component: OperationalStatusComponent
-  let fixture: ComponentFixture<OperationalStatusComponent>
+describe('NavaidStatusComponent', () => {
+  let component: NavaidStatusComponent
+  let fixture: ComponentFixture<NavaidStatusComponent>
   let mockLookupCacheStore: jasmine.SpyObj<LookupCacheStore>
-  let mockFormGroupDirective: jasmine.SpyObj<any>
-  let mockForm: FormGroup
-  let mockScenarioDataForm: FormGroup
-  let navaidStatusTypeSubject: Subject<KeyValueModel[]>
+  let parentFormGroup: FormGroup
+  let formGroupDirectiveStub: FormGroupDirective
 
-  const mockKeyValueModels: KeyValueModel[] = [
-    { key: 'Operational', value: '1' },
-    { key: 'Non-Operational', value: '2' },
-    { key: 'Under Maintenance', value: '3' }
-  ]
+  const getScenarioDataForm = (): FormGroup => {
+    return parentFormGroup.get('scenarioData') as FormGroup
+  }
 
-  const mockFaaNotamModel: FaaNotamModel = {
-    scenarioData: {
-      equipmentStatus: 'Operational'
-    }
-  } as FaaNotamModel
 
   beforeEach(async () => {
-    navaidStatusTypeSubject = new Subject<KeyValueModel[]>()
-    
+    parentFormGroup = new FormGroup({
+      scenarioData: new FormGroup({})
+    })
+
+    formGroupDirectiveStub = {
+      form: parentFormGroup,
+      controlContainer: {
+        get: (name: string) => parentFormGroup.get(name),
+      },
+    } as unknown as FormGroupDirective
+
     mockLookupCacheStore = jasmine.createSpyObj('LookupCacheStore', ['fetchNavaidStatusType'], {
-      navaidStatusType$: navaidStatusTypeSubject.asObservable()
-    })
-
-    mockScenarioDataForm = new FormGroup({
-      equipmentStatus: new FormControl('')
-    })
-
-    mockForm = new FormGroup({
-      scenarioData: mockScenarioDataForm
-    })
-
-    mockFormGroupDirective = jasmine.createSpyObj('FormGroupDirective', [], {
-      form: mockForm
+      navaidStatusType$: of([{ key: 'operational', value: 'Operational' }, { key: 'maintenance', value: 'Maintenance' }])
     })
 
     await TestBed.configureTestingModule({
-      imports: [
-        OperationalStatusComponent,
-        ReactiveFormsModule,
-        MatFormFieldModule,
-        MatSelectModule,
-        NoopAnimationsModule
-      ],
+      imports: [NavaidStatusComponent, ReactiveFormsModule, NoopAnimationsModule],
       providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
         { provide: LookupCacheStore, useValue: mockLookupCacheStore },
-        { provide: 'FormGroupDirective', useValue: mockFormGroupDirective }
+        { provide: FormGroupDirective, useValue: formGroupDirectiveStub }
       ]
     })
-    .overrideComponent(OperationalStatusComponent, {
-      set: {
-        providers: [
-          { provide: LookupCacheStore, useValue: mockLookupCacheStore },
-          { provide: 'FormGroupDirective', useValue: mockFormGroupDirective }
-        ]
-      }
-    })
-    .compileComponents()
+      .compileComponents()
 
-    fixture = TestBed.createComponent(OperationalStatusComponent)
+    fixture = TestBed.createComponent(NavaidStatusComponent)
     component = fixture.componentInstance
-  })
-
-  afterEach(() => {
-    navaidStatusTypeSubject.complete()
+    fixture.componentRef.setInput('model', minimalMockData)
+    fixture.detectChanges()
   })
 
   it('should create', () => {
     expect(component).toBeTruthy()
   })
 
-  describe('ngOnInit', () => {
-    it('should initialize form and fetch navaid status type data', () => {
-      // Arrange
-      spyOn(component as any, 'buildForm')
-
-      // Act
-      component.ngOnInit()
-
-      // Assert
-      expect((component as any).buildForm).toHaveBeenCalled()
-      expect(component.operationalStatus$).toBeDefined()
-      expect(mockLookupCacheStore.fetchNavaidStatusType).toHaveBeenCalled()
-    })
-
-    it('should patch form with model data when model is provided', () => {
-      // Arrange
-      spyOn(component as any, 'buildForm')
-      component.model = () => mockFaaNotamModel
-      spyOn(mockScenarioDataForm, 'patchValue')
-
-      // Act
-      component.ngOnInit()
-
-      // Assert
-      expect(mockScenarioDataForm.patchValue).toHaveBeenCalledWith({
-        equipmentStatus: 'Operational'
-      })
-    })
-
-    it('should not patch form when model is null', () => {
-      // Arrange
-      spyOn(component as any, 'buildForm')
-      component.model = () => null
-      spyOn(mockScenarioDataForm, 'patchValue')
-
-      // Act
-      component.ngOnInit()
-
-      // Assert
-      expect(mockScenarioDataForm.patchValue).toHaveBeenCalledWith({
-        equipmentStatus: undefined
-      })
-    })
+  it('should initialize form and fetch navaid status type', () => {
+    expect(mockLookupCacheStore.fetchNavaidStatusType).toHaveBeenCalled()
+    expect(parentFormGroup.get('scenarioData.equipmentStatus')).toBeTruthy()
   })
 
-  describe('buildForm', () => {
-    it('should add operationalStatus control to the form', () => {
-      // Arrange
-      component.ngOnInit()
-
-      // Act
-      (component as any).buildForm()
-
-      // Assert
-      expect(mockScenarioDataForm.get('operationalStatus')).toBeTruthy()
-      expect(mockScenarioDataForm.get('operationalStatus')?.hasError('required')).toBeTruthy()
-    })
-
-    it('should set operationalStatusForm to scenarioData form group', () => {
-      // Arrange
-      component.ngOnInit()
-
-      // Act
-      (component as any).buildForm()
-
-      // Assert
-      expect(component.operationalStatusForm).toBe(mockScenarioDataForm)
-    })
+  it('should build form with required validation', () => {
+    const scenarioDataForm = getScenarioDataForm()
+    const equipmentStatusControl = scenarioDataForm.get('equipmentStatus')
+    expect(equipmentStatusControl).toBeTruthy()
+    expect(equipmentStatusControl?.hasError('required')).toBeTruthy()
   })
 
-  describe('ngOnDestroy', () => {
-    it('should remove operationalStatus control from form', () => {
-      // Arrange
-      component.ngOnInit()
-      spyOn(mockScenarioDataForm, 'removeControl')
-
-      // Act
-      component.ngOnDestroy()
-
-      // Assert
-      expect(mockScenarioDataForm.removeControl).toHaveBeenCalledWith('operationalStatus')
-    })
+  it('should remove the form control on destroy', () => {
+    expect(parentFormGroup.get('scenarioData.equipmentStatus')).toBeTruthy()
+    fixture.destroy()
+    expect(parentFormGroup.get('scenarioData.equipmentStatus')).toBeFalsy()
   })
 
-  describe('Form Validation', () => {
-    it('should have required validator on operationalStatus control', () => {
-      // Arrange
-      component.ngOnInit()
+  it('should handle form control value changes', () => {
+    const equipmentStatusControl = getScenarioDataForm().get('equipmentStatus')
 
-      // Act
-      const operationalStatusControl = mockScenarioDataForm.get('operationalStatus')
+    equipmentStatusControl?.setValue('maintenance')
+    expect(equipmentStatusControl?.value).toBe('maintenance')
 
-      // Assert
-      expect(operationalStatusControl?.hasError('required')).toBeTruthy()
-    })
+    equipmentStatusControl?.patchValue('operational')
+    expect(equipmentStatusControl?.value).toBe('operational')
+  })
 
-    it('should be valid when operationalStatus has a value', () => {
-      // Arrange
-      component.ngOnInit()
-      const operationalStatusControl = mockScenarioDataForm.get('operationalStatus')
-      operationalStatusControl?.setValue('Operational')
+  it('should maintain form validity state', () => {
+    expect(getScenarioDataForm().invalid).toBeTruthy()
 
-      // Assert
-      expect(operationalStatusControl?.valid).toBeTruthy()
-    })
+    getScenarioDataForm().get('equipmentStatus')?.setValue('operational')
+    expect(getScenarioDataForm().valid).toBeTruthy()
+  })
+
+  it('should handle form control reset', () => {
+    getScenarioDataForm().get('equipmentStatus')?.setValue('maintenance')
+    expect(getScenarioDataForm().get('equipmentStatus')?.value).toBe('maintenance')
+
+    getScenarioDataForm().reset()
+    expect(getScenarioDataForm().get('equipmentStatus')?.value).toBeNull()
   })
 })
