@@ -1,17 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { FormGroup, FormControl, FormGroupDirective } from '@angular/forms';
-import { of, firstValueFrom } from 'rxjs';
+import { firstValueFrom, of } from 'rxjs';
 
 import { OperationalStatusComponent } from './operational-status.component';
 import { LookupCacheStore } from '../../store/lookup-cache-store';
+import { FaaNotamModel, KeyValueModel } from '../../models';
 
 describe('OperationalStatusComponent', () => {
   let fixture: ComponentFixture<OperationalStatusComponent>;
   let component: OperationalStatusComponent;
 
   let rootForm: FormGroup;
-  let mockStore: { navaidStatusType$: any; fetchNavaidStatusType: jasmine.Spy };
+  let mockStore: jasmine.SpyObj<LookupCacheStore>;
 
   beforeEach(async () => {
     rootForm = new FormGroup({
@@ -20,10 +21,13 @@ describe('OperationalStatusComponent', () => {
       }),
     });
 
-    mockStore = {
-      navaidStatusType$: of([{ key: 'OP', value: 'Operational' }]),
-      fetchNavaidStatusType: jasmine.createSpy('fetchNavaidStatusType'),
-    };
+    const navaidStatus: KeyValueModel[] = [{ key: 'OP', value: 'Operational' }];
+
+    mockStore = jasmine.createSpyObj<LookupCacheStore>(
+      'LookupCacheStore',
+      ['fetchNavaidStatusType'],
+      { navaidStatusType$: of(navaidStatus) }
+    );
 
     await TestBed.configureTestingModule({
       imports: [NoopAnimationsModule, OperationalStatusComponent],
@@ -36,9 +40,8 @@ describe('OperationalStatusComponent', () => {
     fixture = TestBed.createComponent(OperationalStatusComponent);
     component = fixture.componentInstance;
 
-    component.model.set({ scenarioData: { equipmentStatus: 'OP' } } as any);
-
-    fixture.detectChanges();
+    component.model.set({ scenarioData: { equipmentStatus: 'OP' } } as FaaNotamModel);
+    fixture.detectChanges(); // triggers ngOnInit
   });
 
   it('should create', () => {
@@ -69,7 +72,7 @@ describe('OperationalStatusComponent', () => {
   it('should remove operationalStatus control on destroy', () => {
     const scenario = rootForm.get('scenarioData') as FormGroup;
     expect(scenario.get('operationalStatus')).toBeTruthy();
-    fixture.destroy();
+    fixture.destroy(); // triggers ngOnDestroy
     expect(scenario.get('operationalStatus')).toBeNull();
   });
 });
