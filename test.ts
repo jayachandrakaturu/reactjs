@@ -55,7 +55,7 @@ describe('NavaidServiceTypeComponent', () => {
                 { provide: FormGroupDirective, useValue: formGroupDirectiveStub },
                 { provide: LookupCacheStore, useClass: LookupCacheStoreMock }
             ]
-        }).compileComponents()
+        }).overrideComponent(NavaidServiceTypeComponent, { set: { template: '' } }).compileComponents()
 
         fixture = TestBed.createComponent(NavaidServiceTypeComponent)
         component = fixture.componentInstance
@@ -90,7 +90,7 @@ describe('NavaidServiceTypeComponent', () => {
                 { provide: FormGroupDirective, useValue: testFormGroupDirective },
                 { provide: LookupCacheStore, useClass: LookupCacheStoreMock }
             ]
-        }).compileComponents()
+        }).overrideComponent(NavaidServiceTypeComponent, { set: { template: '' } }).compileComponents()
 
         const localFixture = TestBed.createComponent(NavaidServiceTypeComponent)
         const localComponent = localFixture.componentInstance
@@ -119,7 +119,7 @@ describe('NavaidServiceTypeComponent', () => {
                 { provide: FormGroupDirective, useValue: testFormGroupDirective },
                 { provide: LookupCacheStore, useValue: lookupMock }
             ]
-        }).compileComponents()
+        }).overrideComponent(NavaidServiceTypeComponent, { set: { template: '' } }).compileComponents()
 
         const localFixture = TestBed.createComponent(NavaidServiceTypeComponent)
         const localComponent = localFixture.componentInstance
@@ -128,7 +128,7 @@ describe('NavaidServiceTypeComponent', () => {
         expect(lookupMock.fetchServiceTypes).toHaveBeenCalled()
 
         let emitted: KeyValueModel[] | undefined
-        const sub = (localComponent as any).serviceType$.subscribe(v => emitted = v)
+        const sub = localComponent.serviceType$.subscribe(v => emitted = v)
         serviceTypes$.next([{ key: 'X', value: 'X-ray' } as unknown as KeyValueModel])
         expect(emitted).toEqual([{ key: 'X', value: 'X-ray' } as unknown as KeyValueModel])
         sub.unsubscribe()
@@ -167,7 +167,7 @@ describe('NavaidServiceTypeComponent', () => {
                     { provide: FormGroupDirective, useValue: formGroupDirectiveStub },
                     { provide: LookupCacheStore, useClass: LookupCacheStoreMock }
                 ]
-            }).compileComponents()
+            }).overrideComponent(NavaidServiceTypeComponent, { set: { template: '' } }).compileComponents()
 
             fixture = TestBed.createComponent(NavaidServiceTypeComponent)
             component = fixture.componentInstance
@@ -186,7 +186,7 @@ describe('NavaidServiceTypeComponent', () => {
                     { provide: FormGroupDirective, useValue: formGroupDirectiveStub },
                     { provide: LookupCacheStore, useClass: LookupCacheStoreMock }
                 ]
-            }).compileComponents()
+            }).overrideComponent(NavaidServiceTypeComponent, { set: { template: '' } }).compileComponents()
 
             fixture = TestBed.createComponent(NavaidServiceTypeComponent)
             component = fixture.componentInstance
@@ -205,7 +205,7 @@ describe('NavaidServiceTypeComponent', () => {
                     { provide: FormGroupDirective, useValue: invalidFormGroupDirective },
                     { provide: LookupCacheStore, useClass: LookupCacheStoreMock }
                 ]
-            }).compileComponents()
+            }).overrideComponent(NavaidServiceTypeComponent, { set: { template: '' } }).compileComponents()
 
             const localFixture = TestBed.createComponent(NavaidServiceTypeComponent)
             expect(() => localFixture.detectChanges()).toThrow()
@@ -222,7 +222,7 @@ describe('NavaidServiceTypeComponent', () => {
                     { provide: FormGroupDirective, useValue: fgDirective },
                     { provide: LookupCacheStore, useClass: LookupCacheStoreMock }
                 ]
-            }).compileComponents()
+            }).overrideComponent(NavaidServiceTypeComponent, { set: { template: '' } }).compileComponents()
 
             const localFixture = TestBed.createComponent(NavaidServiceTypeComponent)
             localFixture.detectChanges()
