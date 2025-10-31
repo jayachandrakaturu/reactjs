@@ -122,6 +122,22 @@ describe('NavaidRadioFrequencyChannelComponent', () => {
         expect(radioFrequencyChannelForm.get('isIncludeChannel')?.value).toBe(true)
     })
 
+    it('should disable isIncludeFrequency when includeFrequency is empty', () => {
+        const scenarioDataForm = getScenarioDataForm()
+        const radioFrequencyChannelForm = scenarioDataForm.get('navaidRadioFrequencyChannel') as FormGroup
+        const isIncludeFrequencyControl = radioFrequencyChannelForm.get('isIncludeFrequency')
+        // updateControlStates is called on init, so controls should be disabled when empty
+        expect(isIncludeFrequencyControl?.disabled).toBe(true)
+    })
+
+    it('should disable isIncludeChannel when includeChannel is empty', () => {
+        const scenarioDataForm = getScenarioDataForm()
+        const radioFrequencyChannelForm = scenarioDataForm.get('navaidRadioFrequencyChannel') as FormGroup
+        const isIncludeChannelControl = radioFrequencyChannelForm.get('isIncludeChannel')
+        // updateControlStates is called on init, so controls should be disabled when empty
+        expect(isIncludeChannelControl?.disabled).toBe(true)
+    })
+
     it('should enable isIncludeFrequency when includeFrequency has value', (done) => {
         const scenarioDataForm = getScenarioDataForm()
         const radioFrequencyChannelForm = scenarioDataForm.get('navaidRadioFrequencyChannel') as FormGroup
@@ -196,8 +212,8 @@ describe('NavaidRadioFrequencyChannelComponent', () => {
         const includeFrequencyControl = radioFrequencyChannelForm.get('includeFrequency')
         const isIncludeFrequencyControl = radioFrequencyChannelForm.get('isIncludeFrequency')
         
-        // Initially enabled (updateControlStates not called on init)
-        expect(isIncludeFrequencyControl?.enabled).toBe(true)
+        // Initially disabled (updateControlStates called on init)
+        expect(isIncludeFrequencyControl?.disabled).toBe(true)
         
         // Set value to trigger valueChanges which calls updateControlStates
         includeFrequencyControl?.setValue('123.45')
