@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing'
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing'
 import { FormControl, FormGroup, FormGroupDirective, ReactiveFormsModule } from '@angular/forms'
 import { NoopAnimationsModule } from '@angular/platform-browser/animations'
 import { FaaNotamModel } from '../../models'
@@ -138,35 +138,29 @@ describe('NavaidRadioFrequencyChannelComponent', () => {
         expect(isIncludeChannelControl?.disabled).toBe(true)
     })
 
-    it('should enable isIncludeFrequency when includeFrequency has value', (done) => {
+    it('should enable isIncludeFrequency when includeFrequency has value', fakeAsync(() => {
         const scenarioDataForm = getScenarioDataForm()
         const radioFrequencyChannelForm = scenarioDataForm.get('navaidRadioFrequencyChannel') as FormGroup
         const includeFrequencyControl = radioFrequencyChannelForm.get('includeFrequency')
         const isIncludeFrequencyControl = radioFrequencyChannelForm.get('isIncludeFrequency')
         
         includeFrequencyControl?.setValue('123.45')
-        // Allow time for valueChanges subscription to process
-        setTimeout(() => {
-            expect(isIncludeFrequencyControl?.enabled).toBe(true)
-            done()
-        }, 10)
-    })
+        tick() // Process valueChanges subscription
+        expect(isIncludeFrequencyControl?.enabled).toBe(true)
+    }))
 
-    it('should enable isIncludeChannel when includeChannel has value', (done) => {
+    it('should enable isIncludeChannel when includeChannel has value', fakeAsync(() => {
         const scenarioDataForm = getScenarioDataForm()
         const radioFrequencyChannelForm = scenarioDataForm.get('navaidRadioFrequencyChannel') as FormGroup
         const includeChannelControl = radioFrequencyChannelForm.get('includeChannel')
         const isIncludeChannelControl = radioFrequencyChannelForm.get('isIncludeChannel')
         
         includeChannelControl?.setValue('CH-1')
-        // Allow time for valueChanges subscription to process
-        setTimeout(() => {
-            expect(isIncludeChannelControl?.enabled).toBe(true)
-            done()
-        }, 10)
-    })
+        tick() // Process valueChanges subscription
+        expect(isIncludeChannelControl?.enabled).toBe(true)
+    }))
 
-    it('should disable isIncludeFrequency when includeFrequency is cleared', (done) => {
+    it('should disable isIncludeFrequency when includeFrequency is cleared', fakeAsync(() => {
         const scenarioDataForm = getScenarioDataForm()
         const radioFrequencyChannelForm = scenarioDataForm.get('navaidRadioFrequencyChannel') as FormGroup
         const includeFrequencyControl = radioFrequencyChannelForm.get('includeFrequency')
@@ -174,19 +168,16 @@ describe('NavaidRadioFrequencyChannelComponent', () => {
         
         // First set a value to enable the control
         includeFrequencyControl?.setValue('123.45')
-        setTimeout(() => {
-            expect(isIncludeFrequencyControl?.enabled).toBe(true)
-            
-            // Then clear it to disable
-            includeFrequencyControl?.setValue('')
-            setTimeout(() => {
-                expect(isIncludeFrequencyControl?.disabled).toBe(true)
-                done()
-            }, 10)
-        }, 10)
-    })
+        tick() // Process valueChanges subscription
+        expect(isIncludeFrequencyControl?.enabled).toBe(true)
+        
+        // Then clear it to disable
+        includeFrequencyControl?.setValue('')
+        tick() // Process valueChanges subscription
+        expect(isIncludeFrequencyControl?.disabled).toBe(true)
+    }))
 
-    it('should disable isIncludeChannel when includeChannel is cleared', (done) => {
+    it('should disable isIncludeChannel when includeChannel is cleared', fakeAsync(() => {
         const scenarioDataForm = getScenarioDataForm()
         const radioFrequencyChannelForm = scenarioDataForm.get('navaidRadioFrequencyChannel') as FormGroup
         const includeChannelControl = radioFrequencyChannelForm.get('includeChannel')
@@ -194,19 +185,16 @@ describe('NavaidRadioFrequencyChannelComponent', () => {
         
         // First set a value to enable the control
         includeChannelControl?.setValue('CH-1')
-        setTimeout(() => {
-            expect(isIncludeChannelControl?.enabled).toBe(true)
-            
-            // Then clear it to disable
-            includeChannelControl?.setValue('')
-            setTimeout(() => {
-                expect(isIncludeChannelControl?.disabled).toBe(true)
-                done()
-            }, 10)
-        }, 10)
-    })
+        tick() // Process valueChanges subscription
+        expect(isIncludeChannelControl?.enabled).toBe(true)
+        
+        // Then clear it to disable
+        includeChannelControl?.setValue('')
+        tick() // Process valueChanges subscription
+        expect(isIncludeChannelControl?.disabled).toBe(true)
+    }))
 
-    it('should call updateControlStates on valueChanges', (done) => {
+    it('should call updateControlStates on valueChanges', fakeAsync(() => {
         const scenarioDataForm = getScenarioDataForm()
         const radioFrequencyChannelForm = scenarioDataForm.get('navaidRadioFrequencyChannel') as FormGroup
         const includeFrequencyControl = radioFrequencyChannelForm.get('includeFrequency')
@@ -217,13 +205,9 @@ describe('NavaidRadioFrequencyChannelComponent', () => {
         
         // Set value to trigger valueChanges which calls updateControlStates
         includeFrequencyControl?.setValue('123.45')
-        
-        // Allow time for valueChanges subscription to process
-        setTimeout(() => {
-            expect(isIncludeFrequencyControl?.enabled).toBe(true)
-            done()
-        }, 10)
-    })
+        tick() // Process valueChanges subscription
+        expect(isIncludeFrequencyControl?.enabled).toBe(true)
+    }))
 
     it('should remove the form control on destroy', () => {
         expect(parentFormGroup.get('scenarioData.navaidRadioFrequencyChannel')).toBeTruthy()
