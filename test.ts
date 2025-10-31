@@ -1,14 +1,12 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing'
 import { FormControl, FormGroup, FormGroupDirective, ReactiveFormsModule } from '@angular/forms'
 import { NoopAnimationsModule } from '@angular/platform-browser/animations'
-import { of, Subject } from 'rxjs'
-import { FaaNotamModel, KeyValueModel } from '../../models'
-import { NavaidServiceTypeComponent } from './navaid-service-type.component'
-import { LookupCacheStore } from '../../store/lookup-cache-store'
+import { FaaNotamModel } from '../../models'
+import { NavaidRadioFrequencyChannelComponent } from './navaid-radio-frequency-channel.component'
 
-describe('NavaidServiceTypeComponent', () => {
-    let component: NavaidServiceTypeComponent
-    let fixture: ComponentFixture<NavaidServiceTypeComponent>
+describe('NavaidRadioFrequencyChannelComponent', () => {
+    let component: NavaidRadioFrequencyChannelComponent
+    let fixture: ComponentFixture<NavaidRadioFrequencyChannelComponent>
     let parentFormGroup: FormGroup
     let formGroupDirectiveStub: FormGroupDirective
 
@@ -17,23 +15,26 @@ describe('NavaidServiceTypeComponent', () => {
         return parentFormGroup.get('scenarioData') as FormGroup
     }
 
-    // mock store
-    class LookupCacheStoreMock {
-        public serviceType$ = of<KeyValueModel[]>([
-            { key: 'A', value: 'Alpha' } as unknown as KeyValueModel,
-            { key: 'B', value: 'Bravo' } as unknown as KeyValueModel
-        ])
-        public fetchServiceTypes = jasmine.createSpy('fetchServiceTypes')
-    }
-
     const minimalMockData: FaaNotamModel = {
         notamId: 'test-id',
-        scenarioData: { navaidServiceType: '' }
+        scenarioData: {
+            navaidRadioFrequencyChannel: {
+                includeFrequency: '',
+                includeChannel: '',
+                isIncludeFrequency: false,
+                isIncludeChannel: false
+            }
+        }
     } as unknown as FaaNotamModel
 
     const mockModelWithData: FaaNotamModel = {
         scenarioData: {
-            navaidServiceType: 'B'
+            navaidRadioFrequencyChannel: {
+                includeFrequency: '123.45',
+                includeChannel: 'CH-1',
+                isIncludeFrequency: true,
+                isIncludeChannel: true
+            }
         }
     } as unknown as FaaNotamModel
 
@@ -50,14 +51,13 @@ describe('NavaidServiceTypeComponent', () => {
         } as unknown as FormGroupDirective
 
         await TestBed.configureTestingModule({
-            imports: [NavaidServiceTypeComponent, ReactiveFormsModule, NoopAnimationsModule],
+            imports: [NavaidRadioFrequencyChannelComponent, ReactiveFormsModule, NoopAnimationsModule],
             providers: [
-                { provide: FormGroupDirective, useValue: formGroupDirectiveStub },
-                { provide: LookupCacheStore, useClass: LookupCacheStoreMock }
+                { provide: FormGroupDirective, useValue: formGroupDirectiveStub }
             ]
-        }).overrideComponent(NavaidServiceTypeComponent, { set: { template: '' } }).compileComponents()
+        }).overrideComponent(NavaidRadioFrequencyChannelComponent, { set: { template: '' } }).compileComponents()
 
-        fixture = TestBed.createComponent(NavaidServiceTypeComponent)
+        fixture = TestBed.createComponent(NavaidRadioFrequencyChannelComponent)
         component = fixture.componentInstance
         fixture.componentRef.setInput('model', minimalMockData)
         fixture.detectChanges()
@@ -67,15 +67,33 @@ describe('NavaidServiceTypeComponent', () => {
         expect(component).toBeTruthy()
     })
 
-    it('should initialize form and add navaidServiceType control', () => {
-        expect(parentFormGroup.get('scenarioData.navaidServiceType')).toBeTruthy()
+    it('should initialize form and add navaidRadioFrequencyChannel control', () => {
+        expect(parentFormGroup.get('scenarioData.navaidRadioFrequencyChannel')).toBeTruthy()
     })
 
-    it('should build form with navaidServiceType control of type FormControl', () => {
+    it('should build form with navaidRadioFrequencyChannel control of type FormGroup', () => {
         const scenarioDataForm = getScenarioDataForm()
-        const control = scenarioDataForm.get('navaidServiceType')
+        const control = scenarioDataForm.get('navaidRadioFrequencyChannel')
         expect(control).toBeTruthy()
-        expect(control).toBeInstanceOf(FormControl)
+        expect(control).toBeInstanceOf(FormGroup)
+    })
+
+    it('should build form with all required controls', () => {
+        const scenarioDataForm = getScenarioDataForm()
+        const radioFrequencyChannelForm = scenarioDataForm.get('navaidRadioFrequencyChannel') as FormGroup
+        expect(radioFrequencyChannelForm.get('includeFrequency')).toBeTruthy()
+        expect(radioFrequencyChannelForm.get('includeChannel')).toBeTruthy()
+        expect(radioFrequencyChannelForm.get('isIncludeFrequency')).toBeTruthy()
+        expect(radioFrequencyChannelForm.get('isIncludeChannel')).toBeTruthy()
+    })
+
+    it('should initialize form controls with default values', () => {
+        const scenarioDataForm = getScenarioDataForm()
+        const radioFrequencyChannelForm = scenarioDataForm.get('navaidRadioFrequencyChannel') as FormGroup
+        expect(radioFrequencyChannelForm.get('includeFrequency')?.value).toBe('')
+        expect(radioFrequencyChannelForm.get('includeChannel')?.value).toBe('')
+        expect(radioFrequencyChannelForm.get('isIncludeFrequency')?.value).toBe(false)
+        expect(radioFrequencyChannelForm.get('isIncludeChannel')?.value).toBe(false)
     })
 
     it('should patch form value from model on init when data exists', async () => {
@@ -85,131 +103,186 @@ describe('NavaidServiceTypeComponent', () => {
         TestBed.resetTestingModule()
 
         await TestBed.configureTestingModule({
-            imports: [NavaidServiceTypeComponent, ReactiveFormsModule, NoopAnimationsModule],
+            imports: [NavaidRadioFrequencyChannelComponent, ReactiveFormsModule, NoopAnimationsModule],
             providers: [
-                { provide: FormGroupDirective, useValue: testFormGroupDirective },
-                { provide: LookupCacheStore, useClass: LookupCacheStoreMock }
+                { provide: FormGroupDirective, useValue: testFormGroupDirective }
             ]
-        }).overrideComponent(NavaidServiceTypeComponent, { set: { template: '' } }).compileComponents()
+        }).overrideComponent(NavaidRadioFrequencyChannelComponent, { set: { template: '' } }).compileComponents()
 
-        const localFixture = TestBed.createComponent(NavaidServiceTypeComponent)
+        const localFixture = TestBed.createComponent(NavaidRadioFrequencyChannelComponent)
         const localComponent = localFixture.componentInstance
         localFixture.componentRef.setInput('model', mockModelWithData)
         localFixture.detectChanges()
 
         const scenarioDataForm = testParentForm.get('scenarioData') as FormGroup
-        expect(scenarioDataForm.get('navaidServiceType')?.value).toBe('B')
+        const radioFrequencyChannelForm = scenarioDataForm.get('navaidRadioFrequencyChannel') as FormGroup
+        expect(radioFrequencyChannelForm.get('includeFrequency')?.value).toBe('123.45')
+        expect(radioFrequencyChannelForm.get('includeChannel')?.value).toBe('CH-1')
+        expect(radioFrequencyChannelForm.get('isIncludeFrequency')?.value).toBe(true)
+        expect(radioFrequencyChannelForm.get('isIncludeChannel')?.value).toBe(true)
     })
 
-    it('should wire serviceType$ and call fetchServiceTypes on init', () => {
-        // Recreate with spies for service stream and fetch method
-        const serviceTypes$ = new Subject<KeyValueModel[]>()
-        const lookupMock = {
-            serviceType$: serviceTypes$.asObservable(),
-            fetchServiceTypes: jasmine.createSpy('fetchServiceTypes')
-        }
+    it('should disable isIncludeFrequency when includeFrequency is empty', () => {
+        const scenarioDataForm = getScenarioDataForm()
+        const radioFrequencyChannelForm = scenarioDataForm.get('navaidRadioFrequencyChannel') as FormGroup
+        const isIncludeFrequencyControl = radioFrequencyChannelForm.get('isIncludeFrequency')
+        expect(isIncludeFrequencyControl?.disabled).toBe(true)
+    })
 
-        const testParentForm = new FormGroup({ scenarioData: new FormGroup({}) })
-        const testFormGroupDirective = { form: testParentForm } as unknown as FormGroupDirective
+    it('should disable isIncludeChannel when includeChannel is empty', () => {
+        const scenarioDataForm = getScenarioDataForm()
+        const radioFrequencyChannelForm = scenarioDataForm.get('navaidRadioFrequencyChannel') as FormGroup
+        const isIncludeChannelControl = radioFrequencyChannelForm.get('isIncludeChannel')
+        expect(isIncludeChannelControl?.disabled).toBe(true)
+    })
 
-        TestBed.resetTestingModule()
-        TestBed.configureTestingModule({
-            imports: [NavaidServiceTypeComponent, ReactiveFormsModule, NoopAnimationsModule],
-            providers: [
-                { provide: FormGroupDirective, useValue: testFormGroupDirective },
-                { provide: LookupCacheStore, useValue: lookupMock }
-            ]
-        }).overrideComponent(NavaidServiceTypeComponent, { set: { template: '' } }).compileComponents()
+    it('should enable isIncludeFrequency when includeFrequency has value', () => {
+        const scenarioDataForm = getScenarioDataForm()
+        const radioFrequencyChannelForm = scenarioDataForm.get('navaidRadioFrequencyChannel') as FormGroup
+        const includeFrequencyControl = radioFrequencyChannelForm.get('includeFrequency')
+        const isIncludeFrequencyControl = radioFrequencyChannelForm.get('isIncludeFrequency')
+        
+        includeFrequencyControl?.setValue('123.45')
+        expect(isIncludeFrequencyControl?.enabled).toBe(true)
+    })
 
-        const localFixture = TestBed.createComponent(NavaidServiceTypeComponent)
-        const localComponent = localFixture.componentInstance
-        localFixture.detectChanges()
+    it('should enable isIncludeChannel when includeChannel has value', () => {
+        const scenarioDataForm = getScenarioDataForm()
+        const radioFrequencyChannelForm = scenarioDataForm.get('navaidRadioFrequencyChannel') as FormGroup
+        const includeChannelControl = radioFrequencyChannelForm.get('includeChannel')
+        const isIncludeChannelControl = radioFrequencyChannelForm.get('isIncludeChannel')
+        
+        includeChannelControl?.setValue('CH-1')
+        expect(isIncludeChannelControl?.enabled).toBe(true)
+    })
 
-        expect(lookupMock.fetchServiceTypes).toHaveBeenCalled()
+    it('should disable isIncludeFrequency when includeFrequency is cleared', () => {
+        const scenarioDataForm = getScenarioDataForm()
+        const radioFrequencyChannelForm = scenarioDataForm.get('navaidRadioFrequencyChannel') as FormGroup
+        const includeFrequencyControl = radioFrequencyChannelForm.get('includeFrequency')
+        const isIncludeFrequencyControl = radioFrequencyChannelForm.get('isIncludeFrequency')
+        
+        includeFrequencyControl?.setValue('123.45')
+        expect(isIncludeFrequencyControl?.enabled).toBe(true)
+        
+        includeFrequencyControl?.setValue('')
+        expect(isIncludeFrequencyControl?.disabled).toBe(true)
+    })
 
-        let emitted: KeyValueModel[] | undefined
-        const sub = localComponent.serviceType$.subscribe(v => emitted = v)
-        serviceTypes$.next([{ key: 'X', value: 'X-ray' } as unknown as KeyValueModel])
-        expect(emitted).toEqual([{ key: 'X', value: 'X-ray' } as unknown as KeyValueModel])
-        sub.unsubscribe()
+    it('should disable isIncludeChannel when includeChannel is cleared', () => {
+        const scenarioDataForm = getScenarioDataForm()
+        const radioFrequencyChannelForm = scenarioDataForm.get('navaidRadioFrequencyChannel') as FormGroup
+        const includeChannelControl = radioFrequencyChannelForm.get('includeChannel')
+        const isIncludeChannelControl = radioFrequencyChannelForm.get('isIncludeChannel')
+        
+        includeChannelControl?.setValue('CH-1')
+        expect(isIncludeChannelControl?.enabled).toBe(true)
+        
+        includeChannelControl?.setValue('')
+        expect(isIncludeChannelControl?.disabled).toBe(true)
+    })
+
+    it('should call updateControlStates on valueChanges', (done) => {
+        const scenarioDataForm = getScenarioDataForm()
+        const radioFrequencyChannelForm = scenarioDataForm.get('navaidRadioFrequencyChannel') as FormGroup
+        const includeFrequencyControl = radioFrequencyChannelForm.get('includeFrequency')
+        const isIncludeFrequencyControl = radioFrequencyChannelForm.get('isIncludeFrequency')
+        
+        expect(isIncludeFrequencyControl?.disabled).toBe(true)
+        
+        includeFrequencyControl?.setValue('123.45')
+        
+        // Allow time for valueChanges subscription to process
+        setTimeout(() => {
+            expect(isIncludeFrequencyControl?.enabled).toBe(true)
+            done()
+        }, 10)
     })
 
     it('should remove the form control on destroy', () => {
-        expect(parentFormGroup.get('scenarioData.navaidServiceType')).toBeTruthy()
+        expect(parentFormGroup.get('scenarioData.navaidRadioFrequencyChannel')).toBeTruthy()
         fixture.destroy()
-        expect(parentFormGroup.get('scenarioData.navaidServiceType')).toBeFalsy()
+        expect(parentFormGroup.get('scenarioData.navaidRadioFrequencyChannel')).toBeFalsy()
     })
 
     describe('Edge Cases', () => {
         it('should handle null model input gracefully', () => {
-            fixture = TestBed.createComponent(NavaidServiceTypeComponent)
+            fixture = TestBed.createComponent(NavaidRadioFrequencyChannelComponent)
             component = fixture.componentInstance
             fixture.componentRef.setInput('model', null)
             fixture.detectChanges()
             // patchValue with undefined should overwrite initial value
-            expect(getScenarioDataForm().get('navaidServiceType')?.value).toBeUndefined()
+            const scenarioDataForm = getScenarioDataForm()
+            const radioFrequencyChannelForm = scenarioDataForm.get('navaidRadioFrequencyChannel') as FormGroup
+            expect(radioFrequencyChannelForm).toBeTruthy()
         })
 
         it('should handle model with null scenarioData by throwing on detectChanges', () => {
             const modelWithNullScenarioData = { scenarioData: null } as unknown as FaaNotamModel
-            fixture = TestBed.createComponent(NavaidServiceTypeComponent)
+            fixture = TestBed.createComponent(NavaidRadioFrequencyChannelComponent)
             component = fixture.componentInstance
             fixture.componentRef.setInput('model', modelWithNullScenarioData)
             expect(() => fixture.detectChanges()).toThrow()
         })
 
-        it('should handle model with null navaidServiceType', async () => {
-            const modelWithNull = { scenarioData: { navaidServiceType: null } } as unknown as FaaNotamModel
+        it('should handle model with null navaidRadioFrequencyChannel', async () => {
+            const modelWithNull = {
+                scenarioData: { navaidRadioFrequencyChannel: null }
+            } as unknown as FaaNotamModel
             TestBed.resetTestingModule()
             await TestBed.configureTestingModule({
-                imports: [NavaidServiceTypeComponent, ReactiveFormsModule, NoopAnimationsModule],
+                imports: [NavaidRadioFrequencyChannelComponent, ReactiveFormsModule, NoopAnimationsModule],
                 providers: [
-                    { provide: FormGroupDirective, useValue: formGroupDirectiveStub },
-                    { provide: LookupCacheStore, useClass: LookupCacheStoreMock }
+                    { provide: FormGroupDirective, useValue: formGroupDirectiveStub }
                 ]
-            }).overrideComponent(NavaidServiceTypeComponent, { set: { template: '' } }).compileComponents()
+            }).overrideComponent(NavaidRadioFrequencyChannelComponent, { set: { template: '' } }).compileComponents()
 
-            fixture = TestBed.createComponent(NavaidServiceTypeComponent)
+            fixture = TestBed.createComponent(NavaidRadioFrequencyChannelComponent)
             component = fixture.componentInstance
             fixture.componentRef.setInput('model', modelWithNull)
             fixture.detectChanges()
 
-            expect(getScenarioDataForm().get('navaidServiceType')?.value).toBeNull()
+            const scenarioDataForm = getScenarioDataForm()
+            const radioFrequencyChannelForm = scenarioDataForm.get('navaidRadioFrequencyChannel') as FormGroup
+            expect(radioFrequencyChannelForm).toBeTruthy()
+            expect(radioFrequencyChannelForm.get('includeFrequency')?.value).toBe('')
         })
 
-        it('should handle model with undefined navaidServiceType', async () => {
-            const modelWithUndefined = { scenarioData: { navaidServiceType: undefined } } as unknown as FaaNotamModel
+        it('should handle model with undefined navaidRadioFrequencyChannel', async () => {
+            const modelWithUndefined = {
+                scenarioData: { navaidRadioFrequencyChannel: undefined }
+            } as unknown as FaaNotamModel
             TestBed.resetTestingModule()
             await TestBed.configureTestingModule({
-                imports: [NavaidServiceTypeComponent, ReactiveFormsModule, NoopAnimationsModule],
+                imports: [NavaidRadioFrequencyChannelComponent, ReactiveFormsModule, NoopAnimationsModule],
                 providers: [
-                    { provide: FormGroupDirective, useValue: formGroupDirectiveStub },
-                    { provide: LookupCacheStore, useClass: LookupCacheStoreMock }
+                    { provide: FormGroupDirective, useValue: formGroupDirectiveStub }
                 ]
-            }).overrideComponent(NavaidServiceTypeComponent, { set: { template: '' } }).compileComponents()
+            }).overrideComponent(NavaidRadioFrequencyChannelComponent, { set: { template: '' } }).compileComponents()
 
-            fixture = TestBed.createComponent(NavaidServiceTypeComponent)
+            fixture = TestBed.createComponent(NavaidRadioFrequencyChannelComponent)
             component = fixture.componentInstance
             fixture.componentRef.setInput('model', modelWithUndefined)
             fixture.detectChanges()
 
-            expect(getScenarioDataForm().get('navaidServiceType')?.value).toBeUndefined()
+            const scenarioDataForm = getScenarioDataForm()
+            const radioFrequencyChannelForm = scenarioDataForm.get('navaidRadioFrequencyChannel') as FormGroup
+            expect(radioFrequencyChannelForm).toBeTruthy()
+            expect(radioFrequencyChannelForm.get('includeFrequency')?.value).toBe('')
         })
 
         it('should handle ngOnInit when FormGroupDirective.form is null', async () => {
             const invalidFormGroupDirective = { form: null } as unknown as FormGroupDirective
             TestBed.resetTestingModule()
             await TestBed.configureTestingModule({
-                imports: [NavaidServiceTypeComponent, ReactiveFormsModule, NoopAnimationsModule],
+                imports: [NavaidRadioFrequencyChannelComponent, ReactiveFormsModule, NoopAnimationsModule],
                 providers: [
-                    { provide: FormGroupDirective, useValue: invalidFormGroupDirective },
-                    { provide: LookupCacheStore, useClass: LookupCacheStoreMock }
+                    { provide: FormGroupDirective, useValue: invalidFormGroupDirective }
                 ]
-            }).overrideComponent(NavaidServiceTypeComponent, { set: { template: '' } }).compileComponents()
+            }).overrideComponent(NavaidRadioFrequencyChannelComponent, { set: { template: '' } }).compileComponents()
 
-            const localFixture = TestBed.createComponent(NavaidServiceTypeComponent)
+            const localFixture = TestBed.createComponent(NavaidRadioFrequencyChannelComponent)
             expect(() => localFixture.detectChanges()).toThrow()
-            expect(() => localFixture.destroy()).toThrow()
         })
 
         it('should handle ngOnDestroy when control does not exist', async () => {
@@ -217,18 +290,46 @@ describe('NavaidServiceTypeComponent', () => {
             const fgDirective = { form: formWithoutControl } as unknown as FormGroupDirective
             TestBed.resetTestingModule()
             await TestBed.configureTestingModule({
-                imports: [NavaidServiceTypeComponent, ReactiveFormsModule, NoopAnimationsModule],
+                imports: [NavaidRadioFrequencyChannelComponent, ReactiveFormsModule, NoopAnimationsModule],
                 providers: [
-                    { provide: FormGroupDirective, useValue: fgDirective },
-                    { provide: LookupCacheStore, useClass: LookupCacheStoreMock }
+                    { provide: FormGroupDirective, useValue: fgDirective }
                 ]
-            }).overrideComponent(NavaidServiceTypeComponent, { set: { template: '' } }).compileComponents()
+            }).overrideComponent(NavaidRadioFrequencyChannelComponent, { set: { template: '' } }).compileComponents()
 
-            const localFixture = TestBed.createComponent(NavaidServiceTypeComponent)
+            const localFixture = TestBed.createComponent(NavaidRadioFrequencyChannelComponent)
             localFixture.detectChanges()
             expect(() => localFixture.destroy()).not.toThrow()
         })
+
+        it('should handle partial data in navaidRadioFrequencyChannel', async () => {
+            const modelWithPartialData: FaaNotamModel = {
+                scenarioData: {
+                    navaidRadioFrequencyChannel: {
+                        includeFrequency: '123.45',
+                        includeChannel: undefined,
+                        isIncludeFrequency: undefined,
+                        isIncludeChannel: false
+                    }
+                }
+            } as unknown as FaaNotamModel
+
+            TestBed.resetTestingModule()
+            await TestBed.configureTestingModule({
+                imports: [NavaidRadioFrequencyChannelComponent, ReactiveFormsModule, NoopAnimationsModule],
+                providers: [
+                    { provide: FormGroupDirective, useValue: formGroupDirectiveStub }
+                ]
+            }).overrideComponent(NavaidRadioFrequencyChannelComponent, { set: { template: '' } }).compileComponents()
+
+            const localFixture = TestBed.createComponent(NavaidRadioFrequencyChannelComponent)
+            localFixture.componentRef.setInput('model', modelWithPartialData)
+            localFixture.detectChanges()
+
+            const scenarioDataForm = getScenarioDataForm()
+            const radioFrequencyChannelForm = scenarioDataForm.get('navaidRadioFrequencyChannel') as FormGroup
+            expect(radioFrequencyChannelForm.get('includeFrequency')?.value).toBe('123.45')
+            expect(radioFrequencyChannelForm.get('includeChannel')?.value).toBe('')
+        })
     })
 })
-
 
