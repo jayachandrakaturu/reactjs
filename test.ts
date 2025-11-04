@@ -255,6 +255,7 @@ fdescribe('NavaidComponent', () => {
             })
             fixture = TestBed.createComponent(NavaidComponent)
             component = fixture.componentInstance
+            fixture.componentRef.setInput('model', { scenarioData: { tfrNavaid: {} } } as FaaNotamModel)
             //  Create and attach form group
             component['form'] = new FormGroup({
                 scenarioData: new FormGroup({}),
@@ -270,7 +271,7 @@ fdescribe('NavaidComponent', () => {
             const frequencyCtrl = navaidForm.get('frequency')!
             const phoneCtrl = navaidForm.get('agencyPhoneNumber')!
             // Ensure frequency is empty and phone has value
-            frequencyCtrl.setValue('')
+            frequencyCtrl.setValue('', { emitEvent: false })
             phoneCtrl.setValue('555-111-2222')
             tick()
             // Frequency should have NO validators (cleared)
@@ -285,6 +286,7 @@ fdescribe('NavaidComponent', () => {
             })
             fixture = TestBed.createComponent(NavaidComponent)
             component = fixture.componentInstance
+            fixture.componentRef.setInput('model', { scenarioData: { tfrNavaid: {} } } as FaaNotamModel)
             component['form'] = new FormGroup({
                 scenarioData: new FormGroup({}),
             })
@@ -293,13 +295,12 @@ fdescribe('NavaidComponent', () => {
                 value: component['form'],
                 writable: true,
             })
-            spyOn(FormControl.prototype, 'updateValueAndValidity').and.stub()
             fixture.detectChanges()
             const navaidForm = component['navaidForm']
             const frequencyCtrl = navaidForm.get('frequency')!
             const phoneCtrl = navaidForm.get('agencyPhoneNumber')!
             // Ensure phone is empty and frequency has value
-            phoneCtrl.setValue('')
+            phoneCtrl.setValue('', { emitEvent: false })
             frequencyCtrl.setValue('108.5')
             tick()
             // Frequency should have required validator
@@ -313,6 +314,7 @@ fdescribe('NavaidComponent', () => {
             })
             fixture = TestBed.createComponent(NavaidComponent)
             component = fixture.componentInstance
+            fixture.componentRef.setInput('model', { scenarioData: { tfrNavaid: {} } } as FaaNotamModel)
             component['form'] = new FormGroup({
                 scenarioData: new FormGroup({}),
             })
@@ -321,13 +323,12 @@ fdescribe('NavaidComponent', () => {
                 value: component['form'],
                 writable: true,
             })
-            spyOn(FormControl.prototype, 'updateValueAndValidity').and.stub()
             fixture.detectChanges()
             const navaidForm = component['navaidForm']
             const frequencyCtrl = navaidForm.get('frequency')!
             const phoneCtrl = navaidForm.get('agencyPhoneNumber')!
-            // Set both fields with values
-            frequencyCtrl.setValue('108.5')
+            // Set both fields with values - set frequency without emitting, then phone triggers validation
+            frequencyCtrl.setValue('108.5', { emitEvent: false })
             phoneCtrl.setValue('555-111-2222')
             tick()
             // Frequency should have NO validators (phone takes priority)
@@ -341,6 +342,7 @@ fdescribe('NavaidComponent', () => {
             })
             fixture = TestBed.createComponent(NavaidComponent)
             component = fixture.componentInstance
+            fixture.componentRef.setInput('model', { scenarioData: { tfrNavaid: {} } } as FaaNotamModel)
             component['form'] = new FormGroup({
                 scenarioData: new FormGroup({}),
             })
@@ -349,13 +351,12 @@ fdescribe('NavaidComponent', () => {
                 value: component['form'],
                 writable: true,
             })
-            spyOn(FormControl.prototype, 'updateValueAndValidity').and.stub()
             fixture.detectChanges()
             const navaidForm = component['navaidForm']
             const frequencyCtrl = navaidForm.get('frequency')!
             const phoneCtrl = navaidForm.get('agencyPhoneNumber')!
             // Set both fields with whitespace only
-            frequencyCtrl.setValue('   ')
+            frequencyCtrl.setValue('   ', { emitEvent: false })
             phoneCtrl.setValue('  ')
             tick()
             // Both should be required (treated as empty after trim)
