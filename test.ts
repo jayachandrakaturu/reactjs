@@ -18,12 +18,13 @@ import { NoopAnimationsModule } from '@angular/platform-browser/animations'
 import { of, Subject } from 'rxjs'
 import { Coordinates, CoordinateService } from '../../../../services/coordinate.service'
 import { RadialDistanceService } from '../../../../utils/components/notam-map/services/radial-distance.service'
-import { ArtccValidateModel, FaaNotamModel, NearestNavaidModel } from '../../models'
+import { ArtccValidateModel, FaaNotamModel } from '../../models'
 import { BackendHubService } from '../../service/backend-hub.service'
 import { BackendLookupService } from '../../service/backend-lookup.service'
 import { LookupCacheStore } from '../../store/lookup-cache-store'
 import { NotamHubStore } from '../../store/notam-hub.store'
 import { NavaidComponent } from './navaid.component'
+import { NearestNavaidModel } from './nearest-navaid.model'
 fdescribe('NavaidComponent', () => {
     let component: NavaidComponent
     let fixture: ComponentFixture<NavaidComponent>
@@ -245,7 +246,7 @@ fdescribe('NavaidComponent', () => {
             fixture.detectChanges()
         })
         it('should clear frequency validators when phone has a value', fakeAsync(() => {
-            //  Safely mock observables
+            //  Safely mock observables
             Object.assign(cacheStore, {
                 navaidList$: of([]),
             })
@@ -254,28 +255,29 @@ fdescribe('NavaidComponent', () => {
             })
             fixture = TestBed.createComponent(NavaidComponent)
             component = fixture.componentInstance
-            //  Create and attach form group
+            //  Create and attach form group
             component['form'] = new FormGroup({
                 scenarioData: new FormGroup({}),
             })
-            //  Safely inject and assign the directive form (no `any`)
+            //  Safely inject and assign the directive form (no `any`)
             const formGroupDirective = TestBed.inject(FormGroupDirective)
             Object.defineProperty(formGroupDirective, 'form', {
                 value: component['form'],
                 writable: true,
             })
-            //  Use stub instead of function for lint safety
-            spyOn(FormControl.prototype, 'updateValueAndValidity').and.stub()
             fixture.detectChanges()
             const navaidForm = component['navaidForm']
             const frequencyCtrl = navaidForm.get('frequency')!
             const phoneCtrl = navaidForm.get('agencyPhoneNumber')!
-            // Trigger form change
+            // Ensure frequency is empty and phone has value
+            frequencyCtrl.setValue('')
             phoneCtrl.setValue('555-111-2222')
             tick()
-            //  Verify expected behavior
-            expect(frequencyCtrl.validator).toBeTruthy()
-            expect(phoneCtrl.validator).toBeTruthy()
+            // Frequency should have NO validators (cleared)
+            expect(frequencyCtrl.validator).toBeNull()
+            // Phone should have required and pattern validators
+            expect(phoneCtrl.hasValidator(Validators.required)).toBeTrue()
+            expect(phoneCtrl.errors).toBeNull() // Valid phone number format
         }))
         it('should require frequency and clear phone validators when frequency has value', fakeAsync(() => {
             Object.assign(cacheStore, {
@@ -291,15 +293,71 @@ fdescribe('NavaidComponent', () => {
                 value: component['form'],
                 writable: true,
             })
-            spyOn(FormControl.prototype, 'updateValueAndValidity').and.stub()
             fixture.detectChanges()
             const navaidForm = component['navaidForm']
             const frequencyCtrl = navaidForm.get('frequency')!
             const phoneCtrl = navaidForm.get('agencyPhoneNumber')!
+            // Ensure phone is empty and frequency has value
+            phoneCtrl.setValue('')
             frequencyCtrl.setValue('108.5')
             tick()
-            expect(frequencyCtrl.validator).toBeTruthy()
-            expect(phoneCtrl.validator).toBeTruthy()
+            // Frequency should have required validator
+            expect(frequencyCtrl.hasValidator(Validators.required)).toBeTrue()
+            // Phone should have NO validators (cleared)
+            expect(phoneCtrl.validator).toBeNull()
+        }))
+        it('should prioritize phone validation when both fields have values', fakeAsync(() => {
+            Object.assign(cacheStore, {
+                navaidList$: of([]),
+            })
+            fixture = TestBed.createComponent(NavaidComponent)
+            component = fixture.componentInstance
+            component['form'] = new FormGroup({
+                scenarioData: new FormGroup({}),
+            })
+            const formGroupDirective = TestBed.inject(FormGroupDirective)
+            Object.defineProperty(formGroupDirective, 'form', {
+                value: component['form'],
+                writable: true,
+            })
+            fixture.detectChanges()
+            const navaidForm = component['navaidForm']
+            const frequencyCtrl = navaidForm.get('frequency')!
+            const phoneCtrl = navaidForm.get('agencyPhoneNumber')!
+            // Set both fields with values
+            frequencyCtrl.setValue('108.5')
+            phoneCtrl.setValue('555-111-2222')
+            tick()
+            // Frequency should have NO validators (phone takes priority)
+            expect(frequencyCtrl.validator).toBeNull()
+            // Phone should have required and pattern validators
+            expect(phoneCtrl.hasValidator(Validators.required)).toBeTrue()
+        }))
+        it('should treat whitespace-only values as empty', fakeAsync(() => {
+            Object.assign(cacheStore, {
+                navaidList$: of([]),
+            })
+            fixture = TestBed.createComponent(NavaidComponent)
+            component = fixture.componentInstance
+            component['form'] = new FormGroup({
+                scenarioData: new FormGroup({}),
+            })
+            const formGroupDirective = TestBed.inject(FormGroupDirective)
+            Object.defineProperty(formGroupDirective, 'form', {
+                value: component['form'],
+                writable: true,
+            })
+            fixture.detectChanges()
+            const navaidForm = component['navaidForm']
+            const frequencyCtrl = navaidForm.get('frequency')!
+            const phoneCtrl = navaidForm.get('agencyPhoneNumber')!
+            // Set both fields with whitespace only
+            frequencyCtrl.setValue('   ')
+            phoneCtrl.setValue('  ')
+            tick()
+            // Both should be required (treated as empty after trim)
+            expect(frequencyCtrl.hasValidator(Validators.required)).toBeTrue()
+            expect(phoneCtrl.hasValidator(Validators.required)).toBeTrue()
         }))
         it('when both empty both should have required after logic runs', fakeAsync(() => {
             const frequency = component['navaidForm'].get('frequency')!
@@ -345,10 +403,29 @@ fdescribe('NavaidComponent', () => {
             const navaidList: NearestNavaidModel[] = [
                 {
                     id: 'NV1',
+                    dafifId: '',
+                    name: '',
+                    icaoId: '',
+                    cityName: '',
+                    stateCode: '',
+                    stateName: '',
+                    countryCode: '',
+                    countryName: '',
+                    accountability: '',
+                    commType: '',
                     latitudePrimary: 40.5,
                     longitudePrimary: -74.2,
-                    magVarn: 12,
+                    latitudeSecondary: 0,
+                    longitudeSecondary: 0,
+                    elevationPrimary: null,
+                    fssId: '',
+                    navType: '',
+                    navId: '',
+                    magVarn: '12',
                     magVarnHemis: 'W',
+                    sourceSystem: '',
+                    coordinatesPrimary: '',
+                    coordinatesSecondary: '',
                 } as NearestNavaidModel,
             ]
             Object.assign(store, {
@@ -391,24 +468,24 @@ fdescribe('NavaidComponent', () => {
             component['selectedNavaid'] = { latitudePrimary: 10, longitudePrimary: 20 }
             component.latestCoords = { lat: 11, lng: 22 }
             radialDistanceSpy.frdAndRadial.and.returnValue({
-                radialMag: undefined,
+                distanceNm: 50.5,
                 radialTrue: 45,
-                distanceNm: 50.5
+                radialMag: undefined
             })
             component['computeFRD']()
             expect(component.frdNm).toBe('045050.5')
         })
 
-        it('should handle NaN radial values', () => {
+        it('should handle zero distance', () => {
             component['selectedNavaid'] = { latitudePrimary: 10, longitudePrimary: 20 }
             component.latestCoords = { lat: 11, lng: 22 }
             radialDistanceSpy.frdAndRadial.and.returnValue({
-                radialMag: undefined,
-                radialTrue: undefined,
-                distanceNm: 25.3
+                distanceNm: 0,
+                radialTrue: 90,
+                radialMag: 92
             })
             component['computeFRD']()
-            expect(component.frdNm).toContain('NaN')
+            expect(component.frdNm).toBe('09200.0')
         })
 
         it('should pass declination to frdAndRadial when available', () => {
