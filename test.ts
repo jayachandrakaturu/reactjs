@@ -316,12 +316,19 @@ fdescribe('NavaidComponent', () => {
     })
 
     describe('validation branch coverage', () => {
+        beforeEach(() => {
+            // Ensure fresh state for validation tests
+            const frequencyCtrl = component['navaidForm'].get('frequency')!
+            const phoneCtrl = component['navaidForm'].get('agencyPhoneNumber')!
+            frequencyCtrl.setValue('', { emitEvent: false })
+            phoneCtrl.setValue('', { emitEvent: false })
+        })
+
         it('should clear frequency validators and set phone validators when phone has value', fakeAsync(() => {
             const frequencyCtrl = component['navaidForm'].get('frequency')!
             const phoneCtrl = component['navaidForm'].get('agencyPhoneNumber')!
 
-            // Set frequency first, then phone (phone takes priority)
-            frequencyCtrl.setValue('', { emitEvent: false })
+            // Set phone with value (phone takes priority)
             phoneCtrl.setValue('555-111-2222')
             tick()
 
@@ -335,8 +342,7 @@ fdescribe('NavaidComponent', () => {
             const frequencyCtrl = component['navaidForm'].get('frequency')!
             const phoneCtrl = component['navaidForm'].get('agencyPhoneNumber')!
 
-            // Set phone first, then frequency
-            phoneCtrl.setValue('', { emitEvent: false })
+            // Set frequency with value (frequency has priority when phone is empty)
             frequencyCtrl.setValue('108.5')
             tick()
 
@@ -350,9 +356,8 @@ fdescribe('NavaidComponent', () => {
             const frequencyCtrl = component['navaidForm'].get('frequency')!
             const phoneCtrl = component['navaidForm'].get('agencyPhoneNumber')!
 
-            // Set both to empty
-            frequencyCtrl.setValue('', { emitEvent: false })
-            phoneCtrl.setValue('')
+            // Both already empty from beforeEach, just trigger validation
+            frequencyCtrl.setValue('')
             tick()
 
             // Both should have required validators
@@ -364,8 +369,9 @@ fdescribe('NavaidComponent', () => {
             const frequencyCtrl = component['navaidForm'].get('frequency')!
             const phoneCtrl = component['navaidForm'].get('agencyPhoneNumber')!
 
-            // Set frequency with value and phone with whitespace
-            frequencyCtrl.setValue('108.5', { emitEvent: false })
+            // Set frequency first, then phone with whitespace
+            frequencyCtrl.setValue('108.5')
+            tick()
             phoneCtrl.setValue('   ')
             tick()
 
@@ -378,8 +384,9 @@ fdescribe('NavaidComponent', () => {
             const frequencyCtrl = component['navaidForm'].get('frequency')!
             const phoneCtrl = component['navaidForm'].get('agencyPhoneNumber')!
 
-            // Set phone with value and frequency with whitespace
-            phoneCtrl.setValue('555-111-2222', { emitEvent: false })
+            // Set phone first, then frequency with whitespace
+            phoneCtrl.setValue('555-111-2222')
+            tick()
             frequencyCtrl.setValue('   ')
             tick()
 
@@ -393,7 +400,8 @@ fdescribe('NavaidComponent', () => {
             const phoneCtrl = component['navaidForm'].get('agencyPhoneNumber')!
 
             // Set both to whitespace-only
-            frequencyCtrl.setValue('   ', { emitEvent: false })
+            frequencyCtrl.setValue('   ')
+            tick()
             phoneCtrl.setValue('  ')
             tick()
 
@@ -406,8 +414,9 @@ fdescribe('NavaidComponent', () => {
             const frequencyCtrl = component['navaidForm'].get('frequency')!
             const phoneCtrl = component['navaidForm'].get('agencyPhoneNumber')!
 
-            // Set both fields with values
-            frequencyCtrl.setValue('108.5', { emitEvent: false })
+            // Set frequency first, then phone
+            frequencyCtrl.setValue('108.5')
+            tick()
             phoneCtrl.setValue('555-111-2222')
             tick()
 
@@ -443,7 +452,8 @@ fdescribe('NavaidComponent', () => {
             expect(frequencyCtrl.validator).toBeNull()
 
             // Clear phone and set frequency
-            phoneCtrl.setValue('', { emitEvent: false })
+            phoneCtrl.setValue('')
+            tick()
             frequencyCtrl.setValue('108.5')
             tick()
 
@@ -462,7 +472,8 @@ fdescribe('NavaidComponent', () => {
             expect(phoneCtrl.validator).toBeNull()
 
             // Clear frequency and set phone
-            frequencyCtrl.setValue('', { emitEvent: false })
+            frequencyCtrl.setValue('')
+            tick()
             phoneCtrl.setValue('555-111-2222')
             tick()
 
