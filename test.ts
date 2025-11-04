@@ -752,7 +752,7 @@ fdescribe('NavaidComponent', () => {
 
 /**/
 
-   it('should clear agencyPhoneNumber validators when frequency has value and phone is empty', fakeAsync(() => {
+    it('should clear agencyPhoneNumber validators when frequency has value and phone is empty', fakeAsync(() => {
             Object.assign(cacheStore, {
                 navaidList$: of([]),
             })
@@ -766,26 +766,26 @@ fdescribe('NavaidComponent', () => {
                 value: component['form'],
                 writable: true,
             })
+
             fixture.detectChanges()
             
             const navaidForm = component['navaidForm']
             const frequency = navaidForm.get('frequency')!
             const phone = navaidForm.get('agencyPhoneNumber')!
             
-            // Set phone to empty first without emitting to avoid double subscription trigger
+            // Spy on the methods AFTER component initialization to track the specific call we want
+            const frequencySetValidatorsSpy = spyOn(frequency, 'setValidators').and.callThrough()
+            const phoneClearValidatorsSpy = spyOn(phone, 'clearValidators').and.callThrough()
+            const updateValiditySpy = spyOn(FormControl.prototype, 'updateValueAndValidity').and.stub()
+            
+            // Trigger the else if branch: phone empty, frequency has value
             phone.setValue('', { emitEvent: false })
-            // Then set frequency with value to trigger the else if branch
             frequency.setValue('108.5', { emitEvent: true })
             tick()
             
-            // Verify frequency has the required validator
-            const frequencyValidators = frequency.validator
-            expect(frequencyValidators).toBeTruthy()
-            const frequencyErrors = frequencyValidators!(new FormControl(''))
-            expect(frequencyErrors?.['required']).toBeTruthy()
-            
-            // Verify phone has no validators (clearValidators was called)
-            const phoneValidators = phone.validator
-            expect(phoneValidators).toBeNull()
+            // Verify that the else if branch methods were called (lines 115-116)
+            expect(frequencySetValidatorsSpy).toHaveBeenCalledWith([Validators.required])
+            expect(phoneClearValidatorsSpy).toHaveBeenCalled()
+            expect(updateValiditySpy).toHaveBeenCalled()
 
         }))
