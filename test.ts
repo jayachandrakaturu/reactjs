@@ -747,3 +747,45 @@ fdescribe('NavaidComponent', () => {
         })
     })
 })
+
+
+
+/**/
+
+  it('should clear agencyPhoneNumber validators when frequency has value and phone is empty', fakeAsync(() => {
+            Object.assign(cacheStore, {
+                navaidList$: of([]),
+            })
+            fixture = TestBed.createComponent(NavaidComponent)
+            component = fixture.componentInstance
+            component['form'] = new FormGroup({
+                scenarioData: new FormGroup({}),
+            })
+            const formGroupDirective = TestBed.inject(FormGroupDirective)
+            Object.defineProperty(formGroupDirective, 'form', {
+                value: component['form'],
+                writable: true,
+            })
+            fixture.detectChanges()
+            
+            const navaidForm = component['navaidForm']
+            const frequency = navaidForm.get('frequency')!
+            const phone = navaidForm.get('agencyPhoneNumber')!
+            
+            // Set phone to empty and frequency with value to trigger the else if branch
+            phone.setValue('')
+            tick()
+            frequency.setValue('108.5')
+            tick()
+            
+            // Verify frequency has the required validator
+            const frequencyValidators = frequency.validator
+            expect(frequencyValidators).toBeTruthy()
+            const frequencyErrors = frequencyValidators!({} as any)
+            expect(frequencyErrors?.['required']).toBeTruthy()
+            
+            // Verify phone has no validators (clearValidators was called)
+            const phoneValidators = phone.validator
+            expect(phoneValidators).toBeNull()
+
+        }))
