@@ -752,7 +752,7 @@ fdescribe('NavaidComponent', () => {
 
 /**/
 
-  it('should clear agencyPhoneNumber validators when frequency has value and phone is empty', fakeAsync(() => {
+   it('should clear agencyPhoneNumber validators when frequency has value and phone is empty', fakeAsync(() => {
             Object.assign(cacheStore, {
                 navaidList$: of([]),
             })
@@ -772,16 +772,16 @@ fdescribe('NavaidComponent', () => {
             const frequency = navaidForm.get('frequency')!
             const phone = navaidForm.get('agencyPhoneNumber')!
             
-            // Set phone to empty and frequency with value to trigger the else if branch
-            phone.setValue('')
-            tick()
-            frequency.setValue('108.5')
+            // Set phone to empty first without emitting to avoid double subscription trigger
+            phone.setValue('', { emitEvent: false })
+            // Then set frequency with value to trigger the else if branch
+            frequency.setValue('108.5', { emitEvent: true })
             tick()
             
             // Verify frequency has the required validator
             const frequencyValidators = frequency.validator
             expect(frequencyValidators).toBeTruthy()
-            const frequencyErrors = frequencyValidators!({} as any)
+            const frequencyErrors = frequencyValidators!(new FormControl(''))
             expect(frequencyErrors?.['required']).toBeTruthy()
             
             // Verify phone has no validators (clearValidators was called)
