@@ -293,6 +293,7 @@ fdescribe('NavaidComponent', () => {
                 value: component['form'],
                 writable: true,
             })
+            spyOn(FormControl.prototype, 'updateValueAndValidity').and.stub()
             fixture.detectChanges()
             const navaidForm = component['navaidForm']
             const frequencyCtrl = navaidForm.get('frequency')!
@@ -320,6 +321,7 @@ fdescribe('NavaidComponent', () => {
                 value: component['form'],
                 writable: true,
             })
+            spyOn(FormControl.prototype, 'updateValueAndValidity').and.stub()
             fixture.detectChanges()
             const navaidForm = component['navaidForm']
             const frequencyCtrl = navaidForm.get('frequency')!
@@ -347,6 +349,7 @@ fdescribe('NavaidComponent', () => {
                 value: component['form'],
                 writable: true,
             })
+            spyOn(FormControl.prototype, 'updateValueAndValidity').and.stub()
             fixture.detectChanges()
             const navaidForm = component['navaidForm']
             const frequencyCtrl = navaidForm.get('frequency')!
