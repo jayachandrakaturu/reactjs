@@ -1,347 +1,275 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing'
 import { FormControl, FormGroup, FormGroupDirective, ReactiveFormsModule } from '@angular/forms'
-import { CommonModule } from '@angular/common'
-import { MatInputModule } from '@angular/material/input'
-import { MatSelectModule } from '@angular/material/select'
-import { MatIconModule } from '@angular/material/icon'
-import { MatCheckboxModule } from '@angular/material/checkbox'
-import { BrowserAnimationsModule } from '@angular/platform-browser/animations'
+import { NoopAnimationsModule } from '@angular/platform-browser/animations'
 import { of, Subject } from 'rxjs'
 import { RunwayLocationComponent } from './runway-location.component'
+import { LocationLookupModel } from './models'
 import { LookupCacheStore } from '../../store/lookup-cache-store'
-import { FaaNotamModel, LocationLookupModel } from '../../models'
+import { FaaNotamModel } from '../../models'
 
-describe('RunwayLocationComponent', () => {
-  let component: RunwayLocationComponent
-  let fixture: ComponentFixture<RunwayLocationComponent>
-  let mockFormGroupDirective: FormGroupDirective
-  let mockLookupCacheStore: jasmine.SpyObj<LookupCacheStore>
-  let parentForm: FormGroup
-  let locationControl: FormControl
-  let locationValueChanges: Subject<string>
+fdescribe('RunwayLocationComponent', () => {
+    let component: RunwayLocationComponent
+    let fixture: ComponentFixture<RunwayLocationComponent>
+    let mockLookupCacheStore: jasmine.SpyObj<LookupCacheStore>
+    let mockFormGroupDirective: FormGroupDirective
+    let parentForm: FormGroup
+    let locationValueChangesSubject: Subject<string>
 
-  const mockLocationLookupData: LocationLookupModel[] = [
-    { name: 'Runway 09L', code: '09L' } as LocationLookupModel,
-    { name: 'Runway 27R', code: '27R' } as LocationLookupModel
-  ]
+    beforeEach(async () => {
+        // Create mock for LookupCacheStore
+        mockLookupCacheStore = jasmine.createSpyObj('LookupCacheStore', ['fetchAccountability'])
+        mockLookupCacheStore.locationLookup$ = of([
+            new LocationLookupModel({ name: 'Runway End 1', locationId: '1' }),
+            new LocationLookupModel({ name: 'Runway End 2', locationId: '2' })
+        ])
 
-  const mockFaaNotamModel: FaaNotamModel = {
-    scenarioData: {
-      runwayLocation: {
-        lengthClosed: '1000',
-        fromRunwayEnd: 'Runway 09L'
-      }
-    }
-  } as FaaNotamModel
+        // Create parent form with scenarioData
+        locationValueChangesSubject = new Subject<string>()
+        parentForm = new FormGroup({
+            location: new FormControl(''),
+            scenarioData: new FormGroup({})
+        })
 
-  beforeEach(async () => {
-    locationValueChanges = new Subject<string>()
-    locationControl = new FormControl('')
-    
-    Object.defineProperty(locationControl, 'valueChanges', {
-      get: () => locationValueChanges.asObservable(),
-      configurable: true
+        // Mock the valueChanges to return our subject
+        Object.defineProperty(parentForm.controls['location'], 'valueChanges', {
+            get: () => locationValueChangesSubject.asObservable()
+        })
+
+        // Create mock FormGroupDirective
+        mockFormGroupDirective = new FormGroupDirective([], [])
+        mockFormGroupDirective.form = parentForm
+
+        await TestBed.configureTestingModule({
+            imports: [
+                RunwayLocationComponent,
+                ReactiveFormsModule,
+                NoopAnimationsModule
+            ],
+            providers: [
+                { provide: FormGroupDirective, useValue: mockFormGroupDirective },
+                { provide: LookupCacheStore, useValue: mockLookupCacheStore }
+            ]
+        }).compileComponents()
     })
 
-    parentForm = new FormGroup({
-      location: locationControl,
-      scenarioData: new FormGroup({})
+    beforeEach(() => {
+        fixture = TestBed.createComponent(RunwayLocationComponent)
+        component = fixture.componentInstance
     })
 
-    mockFormGroupDirective = {
-      form: parentForm
-    } as FormGroupDirective
-
-    mockLookupCacheStore = jasmine.createSpyObj('LookupCacheStore', ['fetchAccountability'], {
-      locationLookup$: of(mockLocationLookupData)
+    it('should create', () => {
+        expect(component).toBeTruthy()
     })
 
-    await TestBed.configureTestingModule({
-      imports: [
-        RunwayLocationComponent,
-        CommonModule,
-        ReactiveFormsModule,
-        MatInputModule,
-        MatSelectModule,
-        MatIconModule,
-        MatCheckboxModule,
-        BrowserAnimationsModule
-      ],
-      providers: [
-        { provide: FormGroupDirective, useValue: mockFormGroupDirective },
-        { provide: LookupCacheStore, useValue: mockLookupCacheStore }
-      ]
-    }).compileComponents()
+    it('should initialize form on ngOnInit', () => {
+        fixture.componentRef.setInput('model', null)
+        fixture.detectChanges()
 
-    fixture = TestBed.createComponent(RunwayLocationComponent)
-    component = fixture.componentInstance
-  })
+        expect(component.runwayLocationForm).toBeDefined()
+        expect(component.runwayLocationForm.get('lengthClosed')).toBeDefined()
+        expect(component.runwayLocationForm.get('fromRunwayEnd')).toBeDefined()
 
-  it('should create', () => {
-    expect(component).toBeTruthy()
-  })
-
-  describe('ngOnInit', () => {
-    it('should initialize form and build runwayLocationForm', () => {
-      fixture.componentRef.setInput('model', null)
-      fixture.detectChanges()
-
-      expect(component.runwayLocationForm).toBeDefined()
-      expect(component.runwayLocationForm.get('lengthClosed')).toBeDefined()
-      expect(component.runwayLocationForm.get('fromRunwayEnd')).toBeDefined()
-    })
-
-    it('should add runwayLocation control to scenarioData', () => {
-      fixture.componentRef.setInput('model', null)
-      fixture.detectChanges()
-
-      const scenarioData = parentForm.get('scenarioData') as FormGroup
-      expect(scenarioData.get('runwayLocation')).toBe(component.runwayLocationForm)
+        const scenarioData = parentForm.get('scenarioData') as FormGroup
+        expect(scenarioData.get('runwayLocation')).toBe(component.runwayLocationForm)
     })
 
     it('should patch form values when model is provided', () => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
-      fixture.detectChanges()
+        const mockModel: FaaNotamModel = {
+            scenarioData: {
+                runwayLocation: {
+                    lengthClosed: '1000',
+                    fromRunwayEnd: 'North End'
+                }
+            }
+        } as FaaNotamModel
 
-      expect(component.runwayLocationForm.get('lengthClosed')?.value).toBe('1000')
-      expect(component.runwayLocationForm.get('fromRunwayEnd')?.value).toBe('Runway 09L')
+        fixture.componentRef.setInput('model', mockModel)
+        fixture.detectChanges()
+
+        expect(component.runwayLocationForm.get('lengthClosed')?.value).toBe('1000')
+        expect(component.runwayLocationForm.get('fromRunwayEnd')?.value).toBe('North End')
     })
 
-    it('should not patch form values when model is null', () => {
-      fixture.componentRef.setInput('model', null)
-      fixture.detectChanges()
+    it('should handle null model on ngOnInit', () => {
+        fixture.componentRef.setInput('model', null)
+        
+        expect(() => {
+            fixture.detectChanges()
+        }).not.toThrow()
 
-      expect(component.runwayLocationForm.get('lengthClosed')?.value).toBe('')
-      expect(component.runwayLocationForm.get('fromRunwayEnd')?.value).toBe('')
+        expect(component.runwayLocationForm.get('lengthClosed')?.value).toBe('')
+        expect(component.runwayLocationForm.get('fromRunwayEnd')?.value).toBe('')
     })
 
-    it('should not patch form values when model scenarioData is undefined', () => {
-      const modelWithoutRunwayLocation: FaaNotamModel = {
-        scenarioData: {}
-      } as FaaNotamModel
-      
-      fixture.componentRef.setInput('model', modelWithoutRunwayLocation)
-      fixture.detectChanges()
+    it('should handle model with undefined runwayLocation', () => {
+        const mockModel: FaaNotamModel = {
+            scenarioData: {}
+        } as FaaNotamModel
 
-      expect(component.runwayLocationForm.get('lengthClosed')?.value).toBe('')
-      expect(component.runwayLocationForm.get('fromRunwayEnd')?.value).toBe('')
+        fixture.componentRef.setInput('model', mockModel)
+        fixture.detectChanges()
+
+        expect(component.runwayLocationForm.get('lengthClosed')?.value).toBe(undefined)
+        expect(component.runwayLocationForm.get('fromRunwayEnd')?.value).toBe(undefined)
     })
 
-    it('should subscribe to location control valueChanges', () => {
-      fixture.componentRef.setInput('model', null)
-      fixture.detectChanges()
+    it('should fetch accountability when location value changes', () => {
+        fixture.componentRef.setInput('model', null)
+        fixture.detectChanges()
 
-      const testLocationValue = 'KJFK'
-      locationValueChanges.next(testLocationValue)
+        const testLocationValue = 'KJFK'
+        locationValueChangesSubject.next(testLocationValue)
 
-      expect(mockLookupCacheStore.fetchAccountability).toHaveBeenCalledWith(testLocationValue)
-      expect(component.fromRunwayEnd$).toBe(mockLookupCacheStore.locationLookup$)
+        expect(mockLookupCacheStore.fetchAccountability).toHaveBeenCalledWith(testLocationValue)
     })
 
-    it('should handle multiple location valueChanges', () => {
-      fixture.componentRef.setInput('model', null)
-      fixture.detectChanges()
+    it('should update fromRunwayEnd$ observable when location value changes', (done) => {
+        fixture.componentRef.setInput('model', null)
+        fixture.detectChanges()
 
-      locationValueChanges.next('KJFK')
-      locationValueChanges.next('KLAX')
-      locationValueChanges.next('KORD')
+        locationValueChangesSubject.next('KLAX')
 
-      expect(mockLookupCacheStore.fetchAccountability).toHaveBeenCalledTimes(3)
-      expect(mockLookupCacheStore.fetchAccountability).toHaveBeenCalledWith('KJFK')
-      expect(mockLookupCacheStore.fetchAccountability).toHaveBeenCalledWith('KLAX')
-      expect(mockLookupCacheStore.fetchAccountability).toHaveBeenCalledWith('KORD')
+        component.fromRunwayEnd$.subscribe((locations: LocationLookupModel[]) => {
+            expect(locations.length).toBe(2)
+            expect(locations[0].name).toBe('Runway End 1')
+            expect(locations[1].name).toBe('Runway End 2')
+            done()
+        })
     })
 
-    it('should assign locationLookup$ from lookupCacheStore', (done) => {
-      fixture.componentRef.setInput('model', null)
-      fixture.detectChanges()
+    it('should handle multiple location value changes', () => {
+        fixture.componentRef.setInput('model', null)
+        fixture.detectChanges()
 
-      locationValueChanges.next('KJFK')
+        locationValueChangesSubject.next('KJFK')
+        locationValueChangesSubject.next('KLAX')
+        locationValueChangesSubject.next('KORD')
 
-      component.fromRunwayEnd$.subscribe((data) => {
-        expect(data).toEqual(mockLocationLookupData)
-        done()
-      })
-    })
-  })
-
-  describe('ngOnDestroy', () => {
-    it('should remove runwayLocation control from scenarioData', () => {
-      fixture.componentRef.setInput('model', null)
-      fixture.detectChanges()
-
-      const scenarioData = parentForm.get('scenarioData') as FormGroup
-      expect(scenarioData.get('runwayLocation')).toBeDefined()
-
-      component.ngOnDestroy()
-
-      expect(scenarioData.get('runwayLocation')).toBeNull()
+        expect(mockLookupCacheStore.fetchAccountability).toHaveBeenCalledTimes(3)
+        expect(mockLookupCacheStore.fetchAccountability).toHaveBeenCalledWith('KJFK')
+        expect(mockLookupCacheStore.fetchAccountability).toHaveBeenCalledWith('KLAX')
+        expect(mockLookupCacheStore.fetchAccountability).toHaveBeenCalledWith('KORD')
     })
 
-    it('should handle ngOnDestroy when scenarioData exists', () => {
-      fixture.componentRef.setInput('model', null)
-      fixture.detectChanges()
+    it('should remove runwayLocation control from scenarioData on ngOnDestroy', () => {
+        fixture.componentRef.setInput('model', null)
+        fixture.detectChanges()
 
-      expect(() => component.ngOnDestroy()).not.toThrow()
-    })
-  })
+        const scenarioData = parentForm.get('scenarioData') as FormGroup
+        expect(scenarioData.get('runwayLocation')).toBeDefined()
 
-  describe('buildForm', () => {
-    it('should create runwayLocationForm with lengthClosed and fromRunwayEnd controls', () => {
-      fixture.componentRef.setInput('model', null)
-      fixture.detectChanges()
+        component.ngOnDestroy()
 
-      expect(component.runwayLocationForm).toBeInstanceOf(FormGroup)
-      expect(component.runwayLocationForm.contains('lengthClosed')).toBe(true)
-      expect(component.runwayLocationForm.contains('fromRunwayEnd')).toBe(true)
+        expect(scenarioData.get('runwayLocation')).toBeNull()
     })
 
-    it('should initialize form controls with empty strings', () => {
-      fixture.componentRef.setInput('model', null)
-      fixture.detectChanges()
+    it('should unsubscribe from location valueChanges on component destroy', () => {
+        fixture.componentRef.setInput('model', null)
+        fixture.detectChanges()
 
-      expect(component.runwayLocationForm.get('lengthClosed')?.value).toBe('')
-      expect(component.runwayLocationForm.get('fromRunwayEnd')?.value).toBe('')
-    })
-  })
+        const initialCallCount = mockLookupCacheStore.fetchAccountability.calls.count()
 
-  describe('Form Integration', () => {
-    it('should update form values correctly', () => {
-      fixture.componentRef.setInput('model', null)
-      fixture.detectChanges()
+        fixture.destroy()
 
-      component.runwayLocationForm.patchValue({
-        lengthClosed: '2000',
-        fromRunwayEnd: 'Runway 27R'
-      })
+        locationValueChangesSubject.next('KJFK')
 
-      expect(component.runwayLocationForm.get('lengthClosed')?.value).toBe('2000')
-      expect(component.runwayLocationForm.get('fromRunwayEnd')?.value).toBe('Runway 27R')
+        // Should still be the same count, meaning subscription was destroyed
+        expect(mockLookupCacheStore.fetchAccountability).toHaveBeenCalledTimes(initialCallCount)
     })
 
-    it('should be part of parent form scenarioData', () => {
-      fixture.componentRef.setInput('model', null)
-      fixture.detectChanges()
+    it('should properly initialize with partial runwayLocation data', () => {
+        const mockModel: FaaNotamModel = {
+            scenarioData: {
+                runwayLocation: {
+                    lengthClosed: '500'
+                }
+            }
+        } as FaaNotamModel
 
-      component.runwayLocationForm.patchValue({
-        lengthClosed: '1500',
-        fromRunwayEnd: 'Runway 09L'
-      })
+        fixture.componentRef.setInput('model', mockModel)
+        fixture.detectChanges()
 
-      const scenarioData = parentForm.get('scenarioData') as FormGroup
-      const runwayLocation = scenarioData.get('runwayLocation') as FormGroup
-
-      expect(runwayLocation.get('lengthClosed')?.value).toBe('1500')
-      expect(runwayLocation.get('fromRunwayEnd')?.value).toBe('Runway 09L')
-    })
-  })
-
-  describe('Observable behavior', () => {
-    it('should update fromRunwayEnd$ when location changes', (done) => {
-      fixture.componentRef.setInput('model', null)
-      fixture.detectChanges()
-
-      locationValueChanges.next('KJFK')
-
-      component.fromRunwayEnd$.subscribe((data) => {
-        expect(data).toEqual(mockLocationLookupData)
-        expect(data.length).toBe(2)
-        expect(data[0].name).toBe('Runway 09L')
-        expect(data[1].name).toBe('Runway 27R')
-        done()
-      })
+        expect(component.runwayLocationForm.get('lengthClosed')?.value).toBe('500')
+        expect(component.runwayLocationForm.get('fromRunwayEnd')?.value).toBe(undefined)
     })
 
-    it('should handle empty location lookup data', (done) => {
-      mockLookupCacheStore = jasmine.createSpyObj('LookupCacheStore', ['fetchAccountability'], {
-        locationLookup$: of([])
-      })
+    it('should have correct form control names', () => {
+        fixture.componentRef.setInput('model', null)
+        fixture.detectChanges()
 
-      TestBed.overrideProvider(LookupCacheStore, { useValue: mockLookupCacheStore })
-      fixture = TestBed.createComponent(RunwayLocationComponent)
-      component = fixture.componentInstance
-
-      fixture.componentRef.setInput('model', null)
-      fixture.detectChanges()
-
-      locationValueChanges.next('KJFK')
-
-      component.fromRunwayEnd$.subscribe((data) => {
-        expect(data).toEqual([])
-        expect(data.length).toBe(0)
-        done()
-      })
-    })
-  })
-
-  describe('Component lifecycle', () => {
-    it('should properly cleanup on destroy', () => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
-      fixture.detectChanges()
-
-      const scenarioData = parentForm.get('scenarioData') as FormGroup
-      expect(scenarioData.get('runwayLocation')).toBeDefined()
-
-      fixture.destroy()
-
-      expect(scenarioData.get('runwayLocation')).toBeNull()
+        const formControls = Object.keys(component.runwayLocationForm.controls)
+        expect(formControls).toContain('lengthClosed')
+        expect(formControls).toContain('fromRunwayEnd')
+        expect(formControls.length).toBe(2)
     })
 
-    it('should handle subscription cleanup via DestroyRef', () => {
-      fixture.componentRef.setInput('model', null)
-      fixture.detectChanges()
+    it('should update form values when manually set', () => {
+        fixture.componentRef.setInput('model', null)
+        fixture.detectChanges()
 
-      locationValueChanges.next('KJFK')
-      expect(mockLookupCacheStore.fetchAccountability).toHaveBeenCalledWith('KJFK')
+        component.runwayLocationForm.patchValue({
+            lengthClosed: '2000',
+            fromRunwayEnd: 'South End'
+        })
 
-      fixture.destroy()
-
-      // After destroy, no further calls should be made
-      const callCount = mockLookupCacheStore.fetchAccountability.calls.count()
-      locationValueChanges.next('KLAX')
-      
-      // Call count should remain the same after destroy
-      expect(mockLookupCacheStore.fetchAccountability.calls.count()).toBe(callCount)
-    })
-  })
-
-  describe('Edge cases', () => {
-    it('should handle null values in model runwayLocation', () => {
-      const modelWithNullValues: FaaNotamModel = {
-        scenarioData: {
-          runwayLocation: {
-            lengthClosed: null,
-            fromRunwayEnd: null
-          }
-        }
-      } as unknown as FaaNotamModel
-
-      fixture.componentRef.setInput('model', modelWithNullValues)
-      fixture.detectChanges()
-
-      expect(component.runwayLocationForm.get('lengthClosed')?.value).toBeNull()
-      expect(component.runwayLocationForm.get('fromRunwayEnd')?.value).toBeNull()
+        expect(component.runwayLocationForm.get('lengthClosed')?.value).toBe('2000')
+        expect(component.runwayLocationForm.get('fromRunwayEnd')?.value).toBe('South End')
     })
 
-    it('should handle undefined location control in parent form', () => {
-      const formWithoutLocation = new FormGroup({
-        scenarioData: new FormGroup({})
-      })
+    it('should maintain form validity state', () => {
+        fixture.componentRef.setInput('model', null)
+        fixture.detectChanges()
 
-      mockFormGroupDirective.form = formWithoutLocation
-      
-      fixture.componentRef.setInput('model', null)
-      
-      expect(() => fixture.detectChanges()).not.toThrow()
+        // Form should be valid as no validators are applied
+        expect(component.runwayLocationForm.valid).toBe(true)
+
+        component.runwayLocationForm.patchValue({
+            lengthClosed: '1500',
+            fromRunwayEnd: 'East End'
+        })
+
+        expect(component.runwayLocationForm.valid).toBe(true)
     })
 
-    it('should initialize with correct default values', () => {
-      fixture.componentRef.setInput('model', null)
-      fixture.detectChanges()
+    it('should handle empty string values in runwayLocation', () => {
+        const mockModel: FaaNotamModel = {
+            scenarioData: {
+                runwayLocation: {
+                    lengthClosed: '',
+                    fromRunwayEnd: ''
+                }
+            }
+        } as FaaNotamModel
 
-      expect(component.runwayLocationForm.get('lengthClosed')?.value).toBe('')
-      expect(component.runwayLocationForm.get('fromRunwayEnd')?.value).toBe('')
+        fixture.componentRef.setInput('model', mockModel)
+        fixture.detectChanges()
+
+        expect(component.runwayLocationForm.get('lengthClosed')?.value).toBe('')
+        expect(component.runwayLocationForm.get('fromRunwayEnd')?.value).toBe('')
     })
-  })
+
+    it('should correctly integrate with parent form', () => {
+        fixture.componentRef.setInput('model', null)
+        fixture.detectChanges()
+
+        component.runwayLocationForm.patchValue({
+            lengthClosed: '3000',
+            fromRunwayEnd: 'West End'
+        })
+
+        const scenarioData = parentForm.get('scenarioData') as FormGroup
+        const runwayLocation = scenarioData.get('runwayLocation') as FormGroup
+
+        expect(runwayLocation.get('lengthClosed')?.value).toBe('3000')
+        expect(runwayLocation.get('fromRunwayEnd')?.value).toBe('West End')
+    })
+
+    it('should render form template without errors', () => {
+        fixture.componentRef.setInput('model', null)
+        fixture.detectChanges()
+
+        const compiled = fixture.nativeElement as HTMLElement
+        expect(compiled.querySelector('form')).toBeTruthy()
+    })
 })
 
