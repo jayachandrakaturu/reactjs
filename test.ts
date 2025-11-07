@@ -7,7 +7,7 @@ import { LocationLookupModel } from './models'
 import { LookupCacheStore } from '../../store/lookup-cache-store'
 import { FaaNotamModel } from '../../models'
 
-fdescribe('RunwayLocationComponent', () => {
+describe('RunwayLocationComponent', () => {
     let component: RunwayLocationComponent
     let fixture: ComponentFixture<RunwayLocationComponent>
     let mockLookupCacheStore: jasmine.SpyObj<LookupCacheStore>
@@ -18,10 +18,15 @@ fdescribe('RunwayLocationComponent', () => {
     beforeEach(async () => {
         // Create mock for LookupCacheStore
         mockLookupCacheStore = jasmine.createSpyObj('LookupCacheStore', ['fetchAccountability'])
-        mockLookupCacheStore.locationLookup$ = of([
-            new LocationLookupModel({ name: 'Runway End 1', locationId: '1' }),
-            new LocationLookupModel({ name: 'Runway End 2', locationId: '2' })
-        ])
+        
+        // Define the readonly locationLookup$ property using Object.defineProperty
+        Object.defineProperty(mockLookupCacheStore, 'locationLookup$', {
+            get: () => of([
+                new LocationLookupModel({ name: 'Runway End 1', locationId: '1' }),
+                new LocationLookupModel({ name: 'Runway End 2', locationId: '2' })
+            ]),
+            configurable: true
+        })
 
         // Create parent form with scenarioData
         locationValueChangesSubject = new Subject<string>()
@@ -65,12 +70,12 @@ fdescribe('RunwayLocationComponent', () => {
         fixture.componentRef.setInput('model', null)
         fixture.detectChanges()
 
-        expect(component.runwayLocationForm).toBeDefined()
-        expect(component.runwayLocationForm.get('lengthClosed')).toBeDefined()
-        expect(component.runwayLocationForm.get('fromRunwayEnd')).toBeDefined()
+        expect(component['runwayLocationForm']).toBeDefined()
+        expect(component['runwayLocationForm'].get('lengthClosed')).toBeDefined()
+        expect(component['runwayLocationForm'].get('fromRunwayEnd')).toBeDefined()
 
         const scenarioData = parentForm.get('scenarioData') as FormGroup
-        expect(scenarioData.get('runwayLocation')).toBe(component.runwayLocationForm)
+        expect(scenarioData.get('runwayLocation')).toBe(component['runwayLocationForm'])
     })
 
     it('should patch form values when model is provided', () => {
@@ -86,8 +91,8 @@ fdescribe('RunwayLocationComponent', () => {
         fixture.componentRef.setInput('model', mockModel)
         fixture.detectChanges()
 
-        expect(component.runwayLocationForm.get('lengthClosed')?.value).toBe('1000')
-        expect(component.runwayLocationForm.get('fromRunwayEnd')?.value).toBe('North End')
+        expect(component['runwayLocationForm'].get('lengthClosed')?.value).toBe('1000')
+        expect(component['runwayLocationForm'].get('fromRunwayEnd')?.value).toBe('North End')
     })
 
     it('should handle null model on ngOnInit', () => {
@@ -97,8 +102,8 @@ fdescribe('RunwayLocationComponent', () => {
             fixture.detectChanges()
         }).not.toThrow()
 
-        expect(component.runwayLocationForm.get('lengthClosed')?.value).toBe('')
-        expect(component.runwayLocationForm.get('fromRunwayEnd')?.value).toBe('')
+        expect(component['runwayLocationForm'].get('lengthClosed')?.value).toBe('')
+        expect(component['runwayLocationForm'].get('fromRunwayEnd')?.value).toBe('')
     })
 
     it('should handle model with undefined runwayLocation', () => {
@@ -109,8 +114,8 @@ fdescribe('RunwayLocationComponent', () => {
         fixture.componentRef.setInput('model', mockModel)
         fixture.detectChanges()
 
-        expect(component.runwayLocationForm.get('lengthClosed')?.value).toBe(undefined)
-        expect(component.runwayLocationForm.get('fromRunwayEnd')?.value).toBe(undefined)
+        expect(component['runwayLocationForm'].get('lengthClosed')?.value).toBe(undefined)
+        expect(component['runwayLocationForm'].get('fromRunwayEnd')?.value).toBe(undefined)
     })
 
     it('should fetch accountability when location value changes', () => {
@@ -189,15 +194,15 @@ fdescribe('RunwayLocationComponent', () => {
         fixture.componentRef.setInput('model', mockModel)
         fixture.detectChanges()
 
-        expect(component.runwayLocationForm.get('lengthClosed')?.value).toBe('500')
-        expect(component.runwayLocationForm.get('fromRunwayEnd')?.value).toBe(undefined)
+        expect(component['runwayLocationForm'].get('lengthClosed')?.value).toBe('500')
+        expect(component['runwayLocationForm'].get('fromRunwayEnd')?.value).toBe(undefined)
     })
 
     it('should have correct form control names', () => {
         fixture.componentRef.setInput('model', null)
         fixture.detectChanges()
 
-        const formControls = Object.keys(component.runwayLocationForm.controls)
+        const formControls = Object.keys(component['runwayLocationForm'].controls)
         expect(formControls).toContain('lengthClosed')
         expect(formControls).toContain('fromRunwayEnd')
         expect(formControls.length).toBe(2)
@@ -207,13 +212,13 @@ fdescribe('RunwayLocationComponent', () => {
         fixture.componentRef.setInput('model', null)
         fixture.detectChanges()
 
-        component.runwayLocationForm.patchValue({
+        component['runwayLocationForm'].patchValue({
             lengthClosed: '2000',
             fromRunwayEnd: 'South End'
         })
 
-        expect(component.runwayLocationForm.get('lengthClosed')?.value).toBe('2000')
-        expect(component.runwayLocationForm.get('fromRunwayEnd')?.value).toBe('South End')
+        expect(component['runwayLocationForm'].get('lengthClosed')?.value).toBe('2000')
+        expect(component['runwayLocationForm'].get('fromRunwayEnd')?.value).toBe('South End')
     })
 
     it('should maintain form validity state', () => {
@@ -221,14 +226,14 @@ fdescribe('RunwayLocationComponent', () => {
         fixture.detectChanges()
 
         // Form should be valid as no validators are applied
-        expect(component.runwayLocationForm.valid).toBe(true)
+        expect(component['runwayLocationForm'].valid).toBe(true)
 
-        component.runwayLocationForm.patchValue({
+        component['runwayLocationForm'].patchValue({
             lengthClosed: '1500',
             fromRunwayEnd: 'East End'
         })
 
-        expect(component.runwayLocationForm.valid).toBe(true)
+        expect(component['runwayLocationForm'].valid).toBe(true)
     })
 
     it('should handle empty string values in runwayLocation', () => {
@@ -244,15 +249,15 @@ fdescribe('RunwayLocationComponent', () => {
         fixture.componentRef.setInput('model', mockModel)
         fixture.detectChanges()
 
-        expect(component.runwayLocationForm.get('lengthClosed')?.value).toBe('')
-        expect(component.runwayLocationForm.get('fromRunwayEnd')?.value).toBe('')
+        expect(component['runwayLocationForm'].get('lengthClosed')?.value).toBe('')
+        expect(component['runwayLocationForm'].get('fromRunwayEnd')?.value).toBe('')
     })
 
     it('should correctly integrate with parent form', () => {
         fixture.componentRef.setInput('model', null)
         fixture.detectChanges()
 
-        component.runwayLocationForm.patchValue({
+        component['runwayLocationForm'].patchValue({
             lengthClosed: '3000',
             fromRunwayEnd: 'West End'
         })
