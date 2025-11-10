@@ -59,44 +59,46 @@ describe('NavaidPeriodOfValidityComponent', () => {
         }).compileComponents()
         fixture = TestBed.createComponent(NavaidPeriodOfValidityComponent)
         component = fixture.componentInstance
+        // Set default model input before detectChanges
+        fixture.componentRef.setInput('model', {} as FaaNotamModel)
         fixture.detectChanges()
     })
 
-        it('should create', () => {
-            expect(component).toBeTruthy()
-        })
+    it('should create', () => {
+        expect(component).toBeTruthy()
+    })
 
-        it('should initialize form controls on ngOnInit', () => {
-            expect(component.form.contains('isStartUponActivation')).toBeTrue()
+    it('should initialize form controls on ngOnInit', () => {
+        expect(component.form.contains('isStartUponActivation')).toBeTrue()
         expect(component.form.contains('notMonitorCondition')).toBeTrue()
-            expect(component.form.contains('startTime')).toBeTrue()
-            expect(component.form.contains('endTime')).toBeTrue()
-            expect(component.form.contains('validity')).toBeTrue()
-        })
+        expect(component.form.contains('startTime')).toBeTrue()
+        expect(component.form.contains('endTime')).toBeTrue()
+        expect(component.form.contains('validity')).toBeTrue()
+    })
 
-        it('should disable startTime when isStartUponActivation is true', () => {
-            component.ngOnInit()
-            component.form.get('isStartUponActivation')?.setValue(true)
-            expect(component.form.get('startTime')?.disabled).toBeTrue()
-        })
+    it('should disable startTime when isStartUponActivation is true', () => {
+        component.ngOnInit()
+        component.form.get('isStartUponActivation')?.setValue(true)
+        expect(component.form.get('startTime')?.disabled).toBeTrue()
+    })
 
-        it('should enable startTime when isStartUponActivation is false', () => {
-            component.ngOnInit()
-            component.form.get('isStartUponActivation')?.setValue(false)
-            expect(component.form.get('startTime')?.enabled).toBeTrue()
-        })
+    it('should enable startTime when isStartUponActivation is false', () => {
+        component.ngOnInit()
+        component.form.get('isStartUponActivation')?.setValue(false)
+        expect(component.form.get('startTime')?.enabled).toBeTrue()
+    })
 
-        it('should reset validity', () => {
-            component.form.get('isStartUponActivation')?.setValue(true)
-            component.resetValidity()
-            expect(component.form.get('isStartUponActivation')?.value).toBeNull()
-        })
+    it('should reset validity', () => {
+        component.form.get('isStartUponActivation')?.setValue(true)
+        component.resetValidity()
+        expect(component.form.get('isStartUponActivation')?.value).toBeNull()
+    })
 
     it('should update store state when checkbox is unchecked', () => {
-            const event: MatCheckboxChange = { checked: false, source: {} as any }
-            component.onCheckboxChange(event)
-            expect(notamHubStoreSpy.patchState).toHaveBeenCalledWith({ isTimeScheduleValid: true })
-        })
+        const event: MatCheckboxChange = { checked: false, source: {} as any }
+        component.onCheckboxChange(event)
+        expect(notamHubStoreSpy.patchState).toHaveBeenCalledWith({ isTimeScheduleValid: true })
+    })
 
     it('should call fetchScheduleDays when checkbox is checked', () => {
         const event: MatCheckboxChange = { checked: true, source: {} as any }
@@ -123,7 +125,7 @@ describe('NavaidPeriodOfValidityComponent', () => {
         povResponse$.next({ status: 'success' })
         fixture.detectChanges()
         expect(toastServiceSpy).toHaveBeenCalled()
-        expect(component.form.get('periodOfValidityError')?.errors).toBeNull()
+        expect(component.form.hasError('periodOfValidityError')).toBeFalse()
     })
 
     it('should handle povResponse$ with success status and return EMPTY', () => {
@@ -132,7 +134,7 @@ describe('NavaidPeriodOfValidityComponent', () => {
         povResponse$.next({ status: 'success' })
         fixture.detectChanges()
         expect(toastServiceSpy).toHaveBeenCalled()
-        expect(component.form.get('periodOfValidityError')?.errors).toBeNull()
+        expect(component.form.hasError('periodOfValidityError')).toBeFalse()
     })
 
     it('should handle povResponse$ with correction status', () => {
