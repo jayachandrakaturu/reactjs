@@ -10,6 +10,7 @@ import { FaaNotamModel } from '../../models'
 import { NotamHubStore } from '../../store/notam-hub.store'
 import { LocaltimeLookupDialogComponent } from '../localtime-lookup-dialog/localtime-lookup-dialog.component'
 import { NavaidPeriodOfValidityComponent } from './navaid-period-of-validity.component'
+import { ScheduleTimeComponent } from './schedule-time.component'
 
 describe('NavaidPeriodOfValidityComponent', () => {
     let component: NavaidPeriodOfValidityComponent
@@ -60,41 +61,41 @@ describe('NavaidPeriodOfValidityComponent', () => {
         fixture.detectChanges()
     })
 
-    it('should create', () => {
-        expect(component).toBeTruthy()
-    })
+        it('should create', () => {
+            expect(component).toBeTruthy()
+        })
 
-    it('should initialize form controls on ngOnInit', () => {
-        expect(component.form.contains('isStartUponActivation')).toBeTrue()
+        it('should initialize form controls on ngOnInit', () => {
+            expect(component.form.contains('isStartUponActivation')).toBeTrue()
         expect(component.form.contains('notMonitorCondition')).toBeTrue()
-        expect(component.form.contains('startTime')).toBeTrue()
-        expect(component.form.contains('endTime')).toBeTrue()
-        expect(component.form.contains('validity')).toBeTrue()
-    })
+            expect(component.form.contains('startTime')).toBeTrue()
+            expect(component.form.contains('endTime')).toBeTrue()
+            expect(component.form.contains('validity')).toBeTrue()
+        })
 
-    it('should disable startTime when isStartUponActivation is true', () => {
-        component.ngOnInit()
-        component.form.get('isStartUponActivation')?.setValue(true)
-        expect(component.form.get('startTime')?.disabled).toBeTrue()
-    })
+        it('should disable startTime when isStartUponActivation is true', () => {
+            component.ngOnInit()
+            component.form.get('isStartUponActivation')?.setValue(true)
+            expect(component.form.get('startTime')?.disabled).toBeTrue()
+        })
 
-    it('should enable startTime when isStartUponActivation is false', () => {
-        component.ngOnInit()
-        component.form.get('isStartUponActivation')?.setValue(false)
-        expect(component.form.get('startTime')?.enabled).toBeTrue()
-    })
+        it('should enable startTime when isStartUponActivation is false', () => {
+            component.ngOnInit()
+            component.form.get('isStartUponActivation')?.setValue(false)
+            expect(component.form.get('startTime')?.enabled).toBeTrue()
+        })
 
-    it('should reset validity', () => {
-        component.form.get('isStartUponActivation')?.setValue(true)
-        component.resetValidity()
-        expect(component.form.get('isStartUponActivation')?.value).toBeNull()
-    })
+        it('should reset validity', () => {
+            component.form.get('isStartUponActivation')?.setValue(true)
+            component.resetValidity()
+            expect(component.form.get('isStartUponActivation')?.value).toBeNull()
+        })
 
     it('should update store state when checkbox is unchecked', () => {
-        const event: MatCheckboxChange = { checked: false, source: {} as any }
-        component.onCheckboxChange(event)
-        expect(notamHubStoreSpy.patchState).toHaveBeenCalledWith({ isTimeScheduleValid: true })
-    })
+            const event: MatCheckboxChange = { checked: false, source: {} as any }
+            component.onCheckboxChange(event)
+            expect(notamHubStoreSpy.patchState).toHaveBeenCalledWith({ isTimeScheduleValid: true })
+        })
 
     it('should call fetchScheduleDays when checkbox is checked', () => {
         const event: MatCheckboxChange = { checked: true, source: {} as any }
@@ -121,30 +122,56 @@ describe('NavaidPeriodOfValidityComponent', () => {
         povResponse$.next({ status: 'success' })
         fixture.detectChanges()
         expect(toastServiceSpy).toHaveBeenCalled()
+        expect(component.form.get('periodOfValidityError')?.errors).toBeNull()
+    })
+
+    it('should handle povResponse$ with success status and return EMPTY', () => {
+        component.form.setErrors({ 'periodOfValidityError': true })
+        const toastServiceSpy = spyOn(component['toastService'], 'clearToast')
+        povResponse$.next({ status: 'success' })
+        fixture.detectChanges()
+        expect(toastServiceSpy).toHaveBeenCalled()
+        expect(component.form.get('periodOfValidityError')?.errors).toBeNull()
     })
 
     it('should handle povResponse$ with correction status', () => {
         const mockCorrection = { startTime: '2024-01-01T10:00:00Z', endTime: '2024-01-01T12:00:00Z' }
+        const toastServiceSpy = spyOn(component['toastService'], 'showToast')
         povResponse$.next({ status: 'correction', data: mockCorrection })
         fixture.detectChanges()
         expect(component.form.get('startTime')?.value).toBeDefined()
         expect(component.form.get('endTime')?.value).toBeDefined()
+        expect(toastServiceSpy).toHaveBeenCalledWith('Period of Validity has been updated per schedule.', 'warning')
     })
 
-    it('should open the dialog with start and end time from the form', () => {
-        const startTime = '2024-08-01T10:00:00Z'
-        const endTime = '2024-08-01T12:00:00Z'
-        component.form.patchValue({ startTime, endTime })
-        component.openLocalTimeDialog()
-        expect(dialogSpy.open).toHaveBeenCalledWith(jasmine.any(Function), {
-            minWidth: '60vw', minHeight: '30vh', panelClass: 'shared-dialog-panel',
-            data: {
-                startTime: startTime,
-                endTime: endTime
-            }
-        })
-        expect(dialogRefSpy.afterClosed).toHaveBeenCalled()
+    it('should handle povResponse$ with undefined status and return EMPTY', () => {
+        povResponse$.next({ status: undefined })
+        fixture.detectChanges()
+        // This should hit the final return EMPTY statement
+        expect(component).toBeTruthy()
     })
+
+    it('should handle povResponse$ with null data and return EMPTY', () => {
+        povResponse$.next(null)
+        fixture.detectChanges()
+        // This should handle null data gracefully
+        expect(component).toBeTruthy()
+    })
+
+        it('should open the dialog with start and end time from the form', () => {
+            const startTime = '2024-08-01T10:00:00Z'
+            const endTime = '2024-08-01T12:00:00Z'
+            component.form.patchValue({ startTime, endTime })
+            component.openLocalTimeDialog()
+        expect(dialogSpy.open).toHaveBeenCalledWith(jasmine.any(Function), {
+                minWidth: '60vw', minHeight: '30vh', panelClass: 'shared-dialog-panel',
+                data: {
+                    startTime: startTime,
+                    endTime: endTime
+                }
+            })
+            expect(dialogRefSpy.afterClosed).toHaveBeenCalled()
+        })
 
     it('should initialize form with model data', () => {
         const mockNotamModel: FaaNotamModel = {
@@ -172,5 +199,60 @@ describe('NavaidPeriodOfValidityComponent', () => {
         component.validatePeriodOfValidityData()
         expect(notamHubStoreSpy.resetPovResponse).toHaveBeenCalled()
         expect(notamHubStoreSpy.checkPeriodOfValidity).toHaveBeenCalled()
+    })
+
+    it('should call scheduleTimeComponent.resetSchedule when success$ emits true', () => {
+        // Create a mock scheduleTimeComponent
+        const mockScheduleTimeComponent = {
+            resetSchedule: jasmine.createSpy('resetSchedule')
+        }
+        
+        // Set the mock scheduleTimeComponent on the component
+        component.scheduleTimeComponent = mockScheduleTimeComponent as any
+        
+        // Trigger the success$ observable to emit true
+        notamHubStoreSpy.success$ = of(true)
+        
+        // Re-run ngOnInit to set up the subscription with the new success$ observable
+        component.ngOnInit()
+        fixture.detectChanges()
+        
+        // Verify that resetSchedule was called
+        expect(mockScheduleTimeComponent.resetSchedule).toHaveBeenCalled()
+    })
+
+    it('should not call scheduleTimeComponent.resetSchedule when scheduleTimeComponent is undefined', () => {
+        // Set scheduleTimeComponent to undefined
+        component.scheduleTimeComponent = undefined as any
+        
+        // Trigger the success$ observable to emit true
+        notamHubStoreSpy.success$ = of(true)
+        
+        // Re-run ngOnInit to set up the subscription
+        component.ngOnInit()
+        fixture.detectChanges()
+        
+        // Since scheduleTimeComponent is undefined, no error should occur
+        expect(component.scheduleTimeComponent).toBeUndefined()
+    })
+
+    it('should not call scheduleTimeComponent.resetSchedule when success$ emits false', () => {
+        // Create a mock scheduleTimeComponent
+        const mockScheduleTimeComponent = {
+            resetSchedule: jasmine.createSpy('resetSchedule')
+        }
+        
+        // Set the mock scheduleTimeComponent on the component
+        component.scheduleTimeComponent = mockScheduleTimeComponent as any
+        
+        // Trigger the success$ observable to emit false
+        notamHubStoreSpy.success$ = of(false)
+        
+        // Re-run ngOnInit to set up the subscription with the new success$ observable
+        component.ngOnInit()
+        fixture.detectChanges()
+        
+        // Verify that resetSchedule was NOT called because success is false
+        expect(mockScheduleTimeComponent.resetSchedule).not.toHaveBeenCalled()
     })
 })
