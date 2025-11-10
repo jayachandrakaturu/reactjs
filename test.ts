@@ -19,6 +19,7 @@ describe('NavaidPeriodOfValidityComponent', () => {
     let dialogSpy: jasmine.SpyObj<MatDialog>
     let dialogRefSpy: jasmine.SpyObj<MatDialogRef<LocaltimeLookupDialogComponent>>
     const povResponse$ = new Subject<any>()
+    const success$ = new Subject<boolean>()
     const mockScheduleDays: string[] = [
         'Tuesday',
         'Wednesday',
@@ -30,7 +31,7 @@ describe('NavaidPeriodOfValidityComponent', () => {
             povResponse$: povResponse$.asObservable(),
             scheduleDays$: of(mockScheduleDays),
             errorMessage$: of('EC2'),
-            success$: of(true)
+            success$: success$.asObservable()
         })
         dialogSpy = jasmine.createSpyObj('MatDialog', ['open'])
         dialogRefSpy = jasmine.createSpyObj('MatDialogRef', ['afterClosed'])
@@ -211,10 +212,7 @@ describe('NavaidPeriodOfValidityComponent', () => {
         component.scheduleTimeComponent = mockScheduleTimeComponent as any
         
         // Trigger the success$ observable to emit true
-        notamHubStoreSpy.success$ = of(true)
-        
-        // Re-run ngOnInit to set up the subscription with the new success$ observable
-        component.ngOnInit()
+        success$.next(true)
         fixture.detectChanges()
         
         // Verify that resetSchedule was called
@@ -225,11 +223,8 @@ describe('NavaidPeriodOfValidityComponent', () => {
         // Set scheduleTimeComponent to undefined
         component.scheduleTimeComponent = undefined as any
         
-        // Trigger the success$ observable to emit true
-        notamHubStoreSpy.success$ = of(true)
-        
-        // Re-run ngOnInit to set up the subscription
-        component.ngOnInit()
+        // Trigger the success$ observable to emit true (should not throw error)
+        success$.next(true)
         fixture.detectChanges()
         
         // Since scheduleTimeComponent is undefined, no error should occur
@@ -246,10 +241,7 @@ describe('NavaidPeriodOfValidityComponent', () => {
         component.scheduleTimeComponent = mockScheduleTimeComponent as any
         
         // Trigger the success$ observable to emit false
-        notamHubStoreSpy.success$ = of(false)
-        
-        // Re-run ngOnInit to set up the subscription with the new success$ observable
-        component.ngOnInit()
+        success$.next(false)
         fixture.detectChanges()
         
         // Verify that resetSchedule was NOT called because success is false
