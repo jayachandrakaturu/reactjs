@@ -50,11 +50,11 @@ describe('ScheduleTimeComponent', () => {
       'resetPovResponse',
       'checkTimeSchedule',
       'patchState'
-    ])
-    mockNotamHubStore.scheduleDays$ = scheduleDaysSubject.asObservable()
-    mockNotamHubStore.previewState$ = previewStateSubject.asObservable()
-    mockNotamHubStore.errorMessage$ = errorMessageSubject.asObservable()
-    mockNotamHubStore.isTimeScheduleValid$ = isTimeScheduleValidSubject.asObservable()
+    ]);
+    Object.defineProperty(mockNotamHubStore, 'scheduleDays$', { value: scheduleDaysSubject.asObservable() });
+    Object.defineProperty(mockNotamHubStore, 'previewState$', { value: previewStateSubject.asObservable() });
+    Object.defineProperty(mockNotamHubStore, 'errorMessage$', { value: errorMessageSubject.asObservable() });
+    Object.defineProperty(mockNotamHubStore, 'isTimeScheduleValid$', { value: isTimeScheduleValidSubject.asObservable() });
 
     mockToastService = jasmine.createSpyObj('ToastService', ['showToast', 'clearToast'])
 
@@ -111,18 +111,22 @@ describe('ScheduleTimeComponent', () => {
     }))
 
     it('should handle scheduleDays value changes', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
-      fixture.detectChanges()
-      tick()
+      fixture.componentRef.setInput('model', mockFaaNotamModel);
+      fixture.detectChanges();
+      tick();
 
-      spyOn<ScheduleTimeComponent, 'setDailySelected'>(component as ScheduleTimeComponent, 'setDailySelected')
-      spyOn<ScheduleTimeComponent, 'setScheduleDay'>(component as ScheduleTimeComponent, 'setScheduleDay')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      spyOn<any>(component, 'setDailySelected');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      spyOn<any>(component, 'setScheduleDay');
 
-      component.scheduleGroup.controls[0].get('scheduleDays')?.setValue('DLY')
-      tick()
+      component.scheduleGroup.controls[0].get('scheduleDays')?.setValue('DLY');
+      tick();
 
-      expect((component as ScheduleTimeComponent)['setDailySelected']).toHaveBeenCalled()
-      expect((component as ScheduleTimeComponent)['setScheduleDay']).toHaveBeenCalled()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      expect((component as any)['setDailySelected']).toHaveBeenCalled();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      expect((component as any)['setScheduleDay']).toHaveBeenCalled();
     }))
 
     it('should patch state when scheduleGroup value changes', fakeAsync(() => {
@@ -277,25 +281,27 @@ describe('ScheduleTimeComponent', () => {
 
   describe('setDailySelected', () => {
     it('should set isDailySelected to true when DLY is selected', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
-      fixture.detectChanges()
-      tick()
+      fixture.componentRef.setInput('model', mockFaaNotamModel);
+      fixture.detectChanges();
+      tick();
 
-      component.scheduleGroup.controls[0].get('scheduleDays')?.setValue('DLY')
-      (component as ScheduleTimeComponent)['setDailySelected']()
+      component.scheduleGroup.controls[0].get('scheduleDays')?.setValue('DLY');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (component as any)['setDailySelected']();
 
-      expect(component.isDailySelected).toBe(true)
+      expect(component.isDailySelected).toBe(true);
     }))
 
     it('should set isDailySelected to false when other day is selected', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
-      fixture.detectChanges()
-      tick()
+      fixture.componentRef.setInput('model', mockFaaNotamModel);
+      fixture.detectChanges();
+      tick();
 
-      component.scheduleGroup.controls[0].get('scheduleDays')?.setValue('MON')
-      (component as ScheduleTimeComponent)['setDailySelected']()
+      component.scheduleGroup.controls[0].get('scheduleDays')?.setValue('MON');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (component as any)['setDailySelected']();
 
-      expect(component.isDailySelected).toBe(false)
+      expect(component.isDailySelected).toBe(false);
     }))
   })
 
@@ -310,7 +316,8 @@ describe('ScheduleTimeComponent', () => {
       component.scheduleGroup.controls[1].get('scheduleDays')?.setValue('TUE');
       component.isDailySelected = true;
       
-      (component as ScheduleTimeComponent)['setScheduleDay']();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (component as any)['setScheduleDay']();
 
       expect(component.scheduleGroup.controls[1].get('scheduleDays')?.value).toBe('DLY')
     }))
@@ -325,7 +332,8 @@ describe('ScheduleTimeComponent', () => {
       component.scheduleGroup.controls[1].get('scheduleDays')?.setValue('DLY');
       component.isDailySelected = false;
       
-      (component as ScheduleTimeComponent)['setScheduleDay']();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (component as any)['setScheduleDay']();
 
       expect(component.scheduleGroup.controls[1].get('scheduleDays')?.value).toBe('MON')
     }))
@@ -333,27 +341,29 @@ describe('ScheduleTimeComponent', () => {
 
   describe('checkScheduleGroupComplete', () => {
     it('should return true when all fields are filled', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
-      fixture.detectChanges()
-      tick()
+      fixture.componentRef.setInput('model', mockFaaNotamModel);
+      fixture.detectChanges();
+      tick();
 
       component.scheduleGroup.controls[0].patchValue({
         scheduleDays: 'MON',
         scheduleStartTimeUTC: '08:00',
         scheduleEndTimeUTC: '17:00'
-      })
+      });
 
-      const result = (component as ScheduleTimeComponent)['checkScheduleGroupComplete']()
-      expect(result).toBe(true)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const result = (component as any)['checkScheduleGroupComplete']();
+      expect(result).toBe(true);
     }))
 
     it('should return false when fields are missing', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModelEmpty)
-      fixture.detectChanges()
-      tick()
+      fixture.componentRef.setInput('model', mockFaaNotamModelEmpty);
+      fixture.detectChanges();
+      tick();
 
-      const result = (component as ScheduleTimeComponent)['checkScheduleGroupComplete']()
-      expect(result).toBe(false)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const result = (component as any)['checkScheduleGroupComplete']();
+      expect(result).toBe(false);
     }))
   })
 
