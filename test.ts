@@ -36,8 +36,11 @@ describe('NavaidPeriodOfValidityComponent', () => {
         dialogRefSpy.afterClosed.and.returnValue(of(undefined))
         dialogSpy.open.and.returnValue(dialogRefSpy)
         const parentFormGroup = new FormGroup({
+            isStartUponActivation: new FormControl(),
+            notMonitorCondition: new FormControl(),
             startTime: new FormControl(),
-            endTime: new FormControl()
+            endTime: new FormControl(),
+            validity: new FormControl()
         })
         const formGroupDirectiveStub = {
             form: parentFormGroup
@@ -63,6 +66,7 @@ describe('NavaidPeriodOfValidityComponent', () => {
 
     it('should initialize form controls on ngOnInit', () => {
         expect(component.form.contains('isStartUponActivation')).toBeTrue()
+        expect(component.form.contains('notMonitorCondition')).toBeTrue()
         expect(component.form.contains('startTime')).toBeTrue()
         expect(component.form.contains('endTime')).toBeTrue()
         expect(component.form.contains('validity')).toBeTrue()
