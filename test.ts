@@ -1,65 +1,78 @@
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing'
-import { FormBuilder, ReactiveFormsModule, FormGroup } from '@angular/forms'
+import { FormBuilder, FormGroupDirective, ReactiveFormsModule } from '@angular/forms'
+import { MatDialog, MatDialogRef } from '@angular/material/dialog'
+import { provideNativeDateAdapter } from '@angular/material/core'
+import { provideMomentDateAdapter } from '@angular/material-moment-adapter'
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations'
+import { MatCheckboxChange } from '@angular/material/checkbox'
+import moment from 'moment'
 import { BehaviorSubject, of } from 'rxjs'
-import { ScheduleTimeComponent, ScheduleDataItem } from './schedule-time.component'
+import { NavaidPeriodOfValidityComponent } from './navaid-period-of-validity.component'
+import { ScheduleTimeComponent } from './schedule-time.component'
 import { NotamHubStore } from '../../store/notam-hub.store'
 import { ToastService } from '../../../../utils/service/toast.service'
-import { FaaNotamModel, PreviewModel } from '../../models'
+import { FaaNotamModel } from '../../models'
 
-describe('ScheduleTimeComponent', () => {
-  let component: ScheduleTimeComponent
-  let fixture: ComponentFixture<ScheduleTimeComponent>
+interface PovResponse {
+  status: string
+  errors?: string[]
+  data?: {
+    startTime: string
+    endTime: string
+  }
+}
+
+describe('NavaidPeriodOfValidityComponent', () => {
+  let component: NavaidPeriodOfValidityComponent
+  let fixture: ComponentFixture<NavaidPeriodOfValidityComponent>
   let mockNotamHubStore: jasmine.SpyObj<NotamHubStore>
   let mockToastService: jasmine.SpyObj<ToastService>
-  let scheduleDaysSubject: BehaviorSubject<string[]>
-  let previewStateSubject: BehaviorSubject<PreviewModel | null>
-  let errorMessageSubject: BehaviorSubject<string | null>
-  let isTimeScheduleValidSubject: BehaviorSubject<boolean>
-
-  const mockScheduleData: ScheduleDataItem[] = [
-    {
-      scheduleDays: 'MON',
-      scheduleStartTimeUTC: '08:00',
-      scheduleEndTimeUTC: '17:00'
-    },
-    {
-      scheduleDays: 'TUE',
-      scheduleStartTimeUTC: '09:00',
-      scheduleEndTimeUTC: '18:00'
-    }
-  ]
+  let mockDialog: jasmine.SpyObj<MatDialog>
+  let mockFormGroupDirective: jasmine.SpyObj<FormGroupDirective>
+  let povResponseSubject: BehaviorSubject<PovResponse | null>
+  let successSubject: BehaviorSubject<boolean>
 
   const mockFaaNotamModel: FaaNotamModel = {
     notamId: '123',
-    scheduleData: mockScheduleData
-  } as FaaNotamModel
-
-  const mockFaaNotamModelEmpty: FaaNotamModel = {
-    notamId: '456',
-    scheduleData: []
-  } as FaaNotamModel
+    isStartUponActivation: false,
+    startTime: moment().toISOString(),
+    endTime: moment().add(1, 'day').toISOString(),
+    scheduleData: [
+      {
+        scheduleDays: 'MON',
+        scheduleStartTimeUTC: '08:00',
+        scheduleEndTimeUTC: '17:00'
+      }
+    ]
+  } as unknown as FaaNotamModel
 
   beforeEach(async () => {
-    scheduleDaysSubject = new BehaviorSubject<string[]>(['Monday', 'Tuesday', 'Wednesday'])
-    previewStateSubject = new BehaviorSubject<PreviewModel | null>(null)
-    errorMessageSubject = new BehaviorSubject<string | null>(null)
-    isTimeScheduleValidSubject = new BehaviorSubject<boolean>(false)
+    povResponseSubject = new BehaviorSubject<PovResponse | null>(null)
+    successSubject = new BehaviorSubject<boolean>(false)
 
     mockNotamHubStore = jasmine.createSpyObj('NotamHubStore', [
       'resetPovResponse',
-      'checkTimeSchedule',
+      'checkPeriodOfValidity',
+      'fetchscheduleDays',
       'patchState'
     ]);
-    Object.defineProperty(mockNotamHubStore, 'scheduleDays$', { value: scheduleDaysSubject.asObservable() });
-    Object.defineProperty(mockNotamHubStore, 'previewState$', { value: previewStateSubject.asObservable() });
-    Object.defineProperty(mockNotamHubStore, 'errorMessage$', { value: errorMessageSubject.asObservable() });
-    Object.defineProperty(mockNotamHubStore, 'isTimeScheduleValid$', { value: isTimeScheduleValidSubject.asObservable() });
+    Object.defineProperty(mockNotamHubStore, 'povResponse$', { value: povResponseSubject.asObservable() });
+    Object.defineProperty(mockNotamHubStore, 'success$', { value: successSubject.asObservable() });
 
-    mockToastService = jasmine.createSpyObj('ToastService', ['showToast', 'clearToast'])
+    mockToastService = jasmine.createSpyObj('ToastService', [
+      'showToast',
+      'clearToast'
+    ])
+
+    mockDialog = jasmine.createSpyObj('MatDialog', ['open'])
+
+    mockFormGroupDirective = jasmine.createSpyObj('FormGroupDirective', [], {
+      form: new FormBuilder().group({})
+    })
 
     await TestBed.configureTestingModule({
       imports: [
+        NavaidPeriodOfValidityComponent,
         ScheduleTimeComponent,
         ReactiveFormsModule,
         BrowserAnimationsModule
@@ -67,12 +80,17 @@ describe('ScheduleTimeComponent', () => {
       providers: [
         FormBuilder,
         { provide: NotamHubStore, useValue: mockNotamHubStore },
-        { provide: ToastService, useValue: mockToastService }
+        { provide: ToastService, useValue: mockToastService },
+        { provide: MatDialog, useValue: mockDialog },
+        { provide: FormGroupDirective, useValue: mockFormGroupDirective },
+        provideNativeDateAdapter(),
+        provideMomentDateAdapter(undefined, { useUtc: true })
       ]
     }).compileComponents()
 
-    fixture = TestBed.createComponent(ScheduleTimeComponent)
+    fixture = TestBed.createComponent(NavaidPeriodOfValidityComponent)
     component = fixture.componentInstance
+    fixture.componentRef.setInput('model', mockFaaNotamModel)
   })
 
   it('should create', () => {
@@ -80,452 +98,323 @@ describe('ScheduleTimeComponent', () => {
   })
 
   describe('ngOnInit', () => {
-    it('should initialize form and observables', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
+    it('should initialize form and subscriptions', fakeAsync(() => {
       fixture.detectChanges()
       tick()
-
-      expect(component.scheduleForm).toBeDefined()
-      expect(component.scheduleDays$).toBeDefined()
-      expect(component.validScheduleData$).toBeDefined()
-      expect(component.errorMessage$).toBeDefined()
-      expect(component.isTimeScheduleValid$).toBeDefined()
-      expect(component.timeRange.length).toBeGreaterThan(0)
+      expect(component.form).toBeDefined()
+      expect(component.form.get('isStartUponActivation')).toBeDefined()
+      expect(component.form.get('startTime')).toBeDefined()
+      expect(component.form.get('endTime')).toBeDefined()
+      expect(component.form.get('validity')).toBeDefined()
     }))
 
-    it('should set timeRange with correct values', () => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
+    it('should handle povResponse$ with failure status', fakeAsync(() => {
       fixture.detectChanges()
+      tick()
+      
+      const failureResponse: PovResponse = {
+        status: 'failure',
+        errors: ['Error 1', 'Error 2']
+      }
+      
+      povResponseSubject.next(failureResponse)
+      tick()
+      
+      expect(mockToastService.showToast).toHaveBeenCalledWith('Error 1, Error 2', 'error')
+      expect(component.form.errors).toEqual({ periodOfValidityError: true })
+    }))
 
-      expect(component.timeRange.length).toBe(96) // 24 hours * 4 (15-minute intervals)
-      expect(component.timeRange[0]).toBe('00:00')
-      expect(component.timeRange[component.timeRange.length - 1]).toBe('23:45')
+    it('should handle povResponse$ with correction status', fakeAsync(() => {
+      fixture.detectChanges()
+      tick()
+      
+      const correctionResponse: PovResponse = {
+        status: 'correction',
+        data: {
+          startTime: moment().toISOString(),
+          endTime: moment().add(2, 'days').toISOString()
+        }
+      }
+      
+      povResponseSubject.next(correctionResponse)
+      tick()
+      
+      expect(mockToastService.showToast).toHaveBeenCalledWith(
+        'Period of Validity has been updated per schedule.',
+        'warning'
+      )
+      expect(component.form.get('startTime')?.value).toBeDefined()
+    }))
+
+    it('should handle povResponse$ with success status', fakeAsync(() => {
+      fixture.detectChanges()
+      tick()
+      
+      const successResponse: PovResponse = {
+        status: 'success'
+      }
+      
+      povResponseSubject.next(successResponse)
+      tick()
+      
+      expect(mockToastService.clearToast).toHaveBeenCalled()
+    }))
+
+    it('should handle success$ subscription and clear toast', fakeAsync(() => {
+      fixture.detectChanges()
+      tick()
+      
+      successSubject.next(true)
+      tick()
+      
+      expect(mockToastService.clearToast).toHaveBeenCalled()
+    }))
+
+    it('should handle isStartUponActivation value changes - true', fakeAsync(() => {
+      fixture.detectChanges()
+      tick()
+      
+      component.form.get('isStartUponActivation')?.setValue(true)
+      tick()
+      
+      expect(component.form.get('startTime')?.disabled).toBe(true)
+      expect(component.form.get('startTime')?.value).toBe('')
+    }))
+
+    it('should handle isStartUponActivation value changes - false', fakeAsync(() => {
+      fixture.detectChanges()
+      tick()
+      
+      component.form.get('isStartUponActivation')?.setValue(false)
+      tick()
+      
+      expect(component.form.get('startTime')?.disabled).toBe(false)
+    }))
+
+    it('should reset schedule when success$ emits true', fakeAsync(() => {
+      fixture.detectChanges()
+      tick()
+      
+      const mockScheduleTimeComponent = jasmine.createSpyObj('ScheduleTimeComponent', ['resetSchedule'])
+      component.scheduleTimeComponent = mockScheduleTimeComponent
+      
+      successSubject.next(true)
+      tick()
+      
+      expect(mockScheduleTimeComponent.resetSchedule).toHaveBeenCalled()
+    }))
+
+    it('should not reset schedule when scheduleTimeComponent is undefined', fakeAsync(() => {
+      fixture.detectChanges()
+      tick()
+      
+      component.scheduleTimeComponent = undefined as unknown as ScheduleTimeComponent
+      
+      successSubject.next(true)
+      tick()
+      
+      expect(mockToastService.clearToast).toHaveBeenCalled()
+    }))
+
+    it('should patch form values with model data', fakeAsync(() => {
+      fixture.detectChanges()
+      tick()
+      
+      expect(component.form.get('isStartUponActivation')?.value).toBe(mockFaaNotamModel.isStartUponActivation)
+      expect(component.form.get('validity')?.value).toBe(true)
+    }))
+
+    it('should set isTimeScheduleValid to true when validity is false', fakeAsync(() => {
+      const modelWithoutSchedule = { ...mockFaaNotamModel, scheduleData: [] }
+      fixture.componentRef.setInput('model', modelWithoutSchedule)
+      fixture.detectChanges()
+      tick()
+      
+      expect(mockNotamHubStore.patchState).toHaveBeenCalledWith({ isTimeScheduleValid: true })
+    }))
+
+    it('should call setAndValidateScheduleData when startTime changes and is valid', fakeAsync(() => {
+      fixture.detectChanges()
+      tick()
+      
+      spyOn(component, 'setAndValidateScheduleData')
+      
+      component.form.get('startTime')?.setValue(moment())
+      component.form.get('startTime')?.markAsTouched()
+      tick(10)
+      
+      expect(component.setAndValidateScheduleData).toHaveBeenCalled()
+    }))
+
+    it('should call setAndValidateScheduleData when endTime changes and is valid', fakeAsync(() => {
+      fixture.detectChanges()
+      tick()
+      
+      spyOn(component, 'setAndValidateScheduleData')
+      
+      component.form.get('endTime')?.setValue(moment().add(1, 'day'))
+      component.form.get('endTime')?.markAsTouched()
+      tick(10)
+      
+      expect(component.setAndValidateScheduleData).toHaveBeenCalled()
+    }))
+  })
+
+  describe('resetValidity', () => {
+    it('should reset isStartUponActivation, startTime, and endTime', () => {
+      fixture.detectChanges()
+      component.form.get('isStartUponActivation')?.setValue(true)
+      component.form.get('startTime')?.setValue(moment())
+      component.form.get('endTime')?.setValue(moment().add(1, 'day'))
+      
+      component.resetValidity()
+      
+      expect(component.form.get('isStartUponActivation')?.value).toBeNull()
+      expect(component.form.get('startTime')?.value).toBeNull()
+      expect(component.form.get('endTime')?.value).toBeNull()
     })
+  })
 
-    it('should initialize with model data', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
+  describe('onCheckboxChange', () => {
+    it('should patch state and call getScheduleDays when checked', fakeAsync(() => {
       fixture.detectChanges()
       tick()
-
-      expect(component.scheduleGroup.length).toBeGreaterThan(0)
-    }))
-
-    it('should handle scheduleDays value changes', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel);
-      fixture.detectChanges();
-      tick();
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      spyOn<any>(component, 'setDailySelected');
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      spyOn<any>(component, 'setScheduleDay');
-
-      component.scheduleGroup.controls[0].get('scheduleDays')?.setValue('DLY');
-      tick();
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      expect((component as any)['setDailySelected']).toHaveBeenCalled();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      expect((component as any)['setScheduleDay']).toHaveBeenCalled();
-    }))
-
-    it('should patch state when scheduleGroup value changes', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
-      fixture.detectChanges()
+      
+      component.form.get('startTime')?.setValue(moment())
+      component.form.get('endTime')?.setValue(moment().add(1, 'day'))
+      
+      const event = { checked: true } as MatCheckboxChange
+      component.onCheckboxChange(event)
       tick()
-
-      component.scheduleGroup.controls[0].get('scheduleStartTimeUTC')?.setValue('10:00')
-      tick()
-
+      
       expect(mockNotamHubStore.patchState).toHaveBeenCalledWith({ isTimeScheduleValid: false })
+      expect(mockNotamHubStore.fetchscheduleDays).toHaveBeenCalled()
+    }))
+
+    it('should patch state when unchecked', () => {
+      fixture.detectChanges()
+      const event = { checked: false } as MatCheckboxChange
+      component.onCheckboxChange(event)
+      
+      expect(mockNotamHubStore.patchState).toHaveBeenCalledWith({ isTimeScheduleValid: true })
+      expect(mockNotamHubStore.fetchscheduleDays).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('openLocalTimeDialog', () => {
+    it('should open dialog with correct configuration', () => {
+      fixture.detectChanges()
+      const mockDialogRef = {
+        afterClosed: () => of(null)
+      } as MatDialogRef<unknown>
+      
+      mockDialog.open.and.returnValue(mockDialogRef)
+      
+      component.form.get('startTime')?.setValue(moment())
+      component.form.get('endTime')?.setValue(moment().add(1, 'day'))
+      
+      component.openLocalTimeDialog()
+      
+      expect(mockDialog.open).toHaveBeenCalled()
+    })
+  })
+
+  describe('setAndValidateScheduleData', () => {
+    it('should call getScheduleDays when validity is true', fakeAsync(() => {
+      fixture.detectChanges()
+      tick()
+      
+      component.form.get('validity')?.setValue(true)
+      component.form.get('startTime')?.setValue(moment())
+      component.form.get('endTime')?.setValue(moment().add(1, 'day'))
+      
+      component.setAndValidateScheduleData()
+      
+      expect(mockNotamHubStore.fetchscheduleDays).toHaveBeenCalled()
+    }))
+
+    it('should not call getScheduleDays when validity is false', fakeAsync(() => {
+      fixture.detectChanges()
+      tick()
+      
+      component.form.get('validity')?.setValue(false)
+      
+      mockNotamHubStore.fetchscheduleDays.calls.reset()
+      component.setAndValidateScheduleData()
+      
+      expect(mockNotamHubStore.fetchscheduleDays).not.toHaveBeenCalled()
+    }))
+
+    it('should use current time when isStartUponActivation is true', fakeAsync(() => {
+      fixture.detectChanges()
+      tick()
+      
+      component.form.get('validity')?.setValue(true)
+      component.form.get('isStartUponActivation')?.setValue(true)
+      component.form.get('endTime')?.setValue(moment().add(1, 'day'))
+      
+      component.setAndValidateScheduleData()
+      tick()
+      
+      expect(mockNotamHubStore.fetchscheduleDays).toHaveBeenCalled()
+      const callArgs = mockNotamHubStore.fetchscheduleDays.calls.mostRecent().args[0]
+      expect(callArgs.startTime).toBeDefined()
+      expect(callArgs.endTime).toBeDefined()
     }))
   })
 
-  describe('addScheduleGroup', () => {
-    it('should add a new schedule group', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
+  describe('validatePeriodOfValidityData', () => {
+    it('should reset pov response and check period of validity', () => {
       fixture.detectChanges()
-      tick()
-
-      const initialLength = component.scheduleGroup.length
-      component.addScheduleGroup()
-
-      expect(component.scheduleGroup.length).toBe(initialLength + 1)
-    }))
-  })
-
-  describe('deleteScheduleGroup', () => {
-    it('should delete schedule group at index', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
-      fixture.detectChanges()
-      tick()
-
-      component.addScheduleGroup()
-      const initialLength = component.scheduleGroup.length
-      component.deleteScheduleGroup(0)
-
-      expect(component.scheduleGroup.length).toBe(initialLength - 1)
-    }))
-
-    it('should reset schedule when deleting last group', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModelEmpty)
-      fixture.detectChanges()
-      tick()
-
-      spyOn(component, 'resetSchedule')
-      component.deleteScheduleGroup(0)
-
-      expect(component.resetSchedule).toHaveBeenCalled()
-    }))
-  })
-
-  describe('resetSchedule', () => {
-    it('should reset schedule form', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
-      fixture.detectChanges()
-      tick()
-
-      component.resetSchedule()
-      tick()
-
-      expect(component.scheduleGroup.length).toBe(1)
-      expect(component.scheduleGroup.controls[0].get('scheduleDays')?.value).toBe('')
-    }))
-  })
-
-  describe('scheduleGroup getter', () => {
-    it('should return scheduleData FormArray', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
-      fixture.detectChanges()
-      tick()
-
-      const scheduleGroup = component.scheduleGroup
-      expect(scheduleGroup).toBeDefined()
-      expect(scheduleGroup.length).toBeGreaterThan(0)
-    }))
-  })
-
-  describe('validateScheduleOnClick', () => {
-    it('should validate and call checkTimeSchedule when schedule is complete', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
-      fixture.detectChanges()
-      tick()
-
-      component.scheduleGroup.controls[0].patchValue({
-        scheduleDays: 'MON',
-        scheduleStartTimeUTC: '08:00',
-        scheduleEndTimeUTC: '17:00'
-      })
-
-      component.validateScheduleOnClick()
-
+      
+      component.validatePeriodOfValidityData()
+      
       expect(mockNotamHubStore.resetPovResponse).toHaveBeenCalled()
-      expect(mockNotamHubStore.checkTimeSchedule).toHaveBeenCalled()
-    }))
-
-    it('should not validate when schedule is incomplete', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModelEmpty)
-      fixture.detectChanges()
-      tick()
-
-      mockNotamHubStore.resetPovResponse.calls.reset()
-      mockNotamHubStore.checkTimeSchedule.calls.reset()
-
-      component.validateScheduleOnClick()
-
-      expect(mockNotamHubStore.resetPovResponse).not.toHaveBeenCalled()
-      expect(mockNotamHubStore.checkTimeSchedule).not.toHaveBeenCalled()
-    }))
+      expect(mockNotamHubStore.checkPeriodOfValidity).toHaveBeenCalled()
+    })
   })
 
-  describe('getScheduleFormValue', () => {
-    it('should return schedule form value', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
+  describe('ngOnDestroy', () => {
+    it('should clear toast on destroy', () => {
       fixture.detectChanges()
-      tick()
-
-      const formValue = component.getScheduleFormValue()
-      expect(formValue).toBeDefined()
-      expect(formValue.scheduleData).toBeDefined()
-    }))
-  })
-
-  describe('setNotamScheduleModel', () => {
-    it('should set model with existing schedule data', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
-      fixture.detectChanges()
-      tick()
-
-      expect(component.scheduleGroup.length).toBe(mockScheduleData.length)
-      expect(component.scheduleGroup.controls[0].get('scheduleDays')?.value).toBe('MON')
-    }))
-
-    it('should set model without schedule data', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModelEmpty)
-      fixture.detectChanges()
-      tick()
-
-      expect(component.scheduleGroup.length).toBe(1)
-      expect(component.scheduleGroup.controls[0].get('scheduleDays')?.value).toBe('')
-    }))
-
-    it('should handle null scheduleData', fakeAsync(() => {
-      const modelWithNullSchedule = { ...mockFaaNotamModel, scheduleData: undefined }
-      fixture.componentRef.setInput('model', modelWithNullSchedule)
-      fixture.detectChanges()
-      tick()
-
-      expect(component.scheduleGroup.length).toBe(1)
-    }))
-  })
-
-  describe('setDailySelected', () => {
-    it('should set isDailySelected to true when DLY is selected', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel);
-      fixture.detectChanges();
-      tick();
-
-      component.scheduleGroup.controls[0].get('scheduleDays')?.setValue('DLY');
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (component as any)['setDailySelected']();
-
-      expect(component.isDailySelected).toBe(true);
-    }))
-
-    it('should set isDailySelected to false when other day is selected', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel);
-      fixture.detectChanges();
-      tick();
-
-      component.scheduleGroup.controls[0].get('scheduleDays')?.setValue('MON');
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (component as any)['setDailySelected']();
-
-      expect(component.isDailySelected).toBe(false);
-    }))
-  })
-
-  describe('setScheduleDay', () => {
-    it('should update all schedules when DLY is selected', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
-      fixture.detectChanges()
-      tick()
-
-      component.addScheduleGroup();
-      component.scheduleGroup.controls[0].get('scheduleDays')?.setValue('DLY');
-      component.scheduleGroup.controls[1].get('scheduleDays')?.setValue('TUE');
-      component.isDailySelected = true;
+      component.ngOnDestroy()
       
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (component as any)['setScheduleDay']();
-
-      expect(component.scheduleGroup.controls[1].get('scheduleDays')?.value).toBe('DLY')
-    }))
-
-    it('should update all DLY schedules when switching from DLY', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
-      fixture.detectChanges()
-      tick()
-
-      component.addScheduleGroup();
-      component.scheduleGroup.controls[0].get('scheduleDays')?.setValue('MON');
-      component.scheduleGroup.controls[1].get('scheduleDays')?.setValue('DLY');
-      component.isDailySelected = false;
-      
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (component as any)['setScheduleDay']();
-
-      expect(component.scheduleGroup.controls[1].get('scheduleDays')?.value).toBe('MON')
-    }))
-  })
-
-  describe('checkScheduleGroupComplete', () => {
-    it('should return true when all fields are filled', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel);
-      fixture.detectChanges();
-      tick();
-
-      component.scheduleGroup.controls[0].patchValue({
-        scheduleDays: 'MON',
-        scheduleStartTimeUTC: '08:00',
-        scheduleEndTimeUTC: '17:00'
-      });
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const result = (component as any)['checkScheduleGroupComplete']();
-      expect(result).toBe(true);
-    }))
-
-    it('should return false when fields are missing', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModelEmpty);
-      fixture.detectChanges();
-      tick();
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const result = (component as any)['checkScheduleGroupComplete']();
-      expect(result).toBe(false);
-    }))
-  })
-
-  describe('timeRangevalidator', () => {
-    it('should return null for empty value', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
-      fixture.detectChanges()
-      tick()
-
-      const control = component.scheduleGroup.controls[0].get('scheduleStartTimeUTC')
-      control?.setValue('')
-      
-      expect(control?.errors).toBeNull()
-    }))
-
-    it('should return null for SR value', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
-      fixture.detectChanges()
-      tick()
-
-      const control = component.scheduleGroup.controls[0].get('scheduleStartTimeUTC')
-      control?.setValue('SR')
-      
-      expect(control?.errors).toBeNull()
-    }))
-
-    it('should return null for SS value', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
-      fixture.detectChanges()
-      tick()
-
-      const control = component.scheduleGroup.controls[0].get('scheduleStartTimeUTC')
-      control?.setValue('SS')
-      
-      expect(control?.errors).toBeNull()
-    }))
-
-    it('should return null for valid time format', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
-      fixture.detectChanges()
-      tick()
-
-      const control = component.scheduleGroup.controls[0].get('scheduleStartTimeUTC')
-      control?.setValue('14:30')
-      
-      expect(control?.hasError('invalidFormat')).toBe(false)
-    }))
-
-    it('should return error for invalid hour', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
-      fixture.detectChanges()
-      tick()
-
-      const control = component.scheduleGroup.controls[0].get('scheduleStartTimeUTC')
-      control?.setValue('25:00')
-      
-      expect(control?.hasError('invalidFormat')).toBe(true)
-    }))
-
-    it('should return error for invalid minute', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
-      fixture.detectChanges()
-      tick()
-
-      const control = component.scheduleGroup.controls[0].get('scheduleStartTimeUTC')
-      control?.setValue('14:60')
-      
-      expect(control?.hasError('invalidFormat')).toBe(true)
-    }))
-
-    it('should return error for negative hour', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
-      fixture.detectChanges()
-      tick()
-
-      const control = component.scheduleGroup.controls[0].get('scheduleStartTimeUTC')
-      control?.setValue('-1:30')
-      
-      expect(control?.hasError('invalidFormat')).toBe(true)
-    }))
-
-    it('should return error for negative minute', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
-      fixture.detectChanges()
-      tick()
-
-      const control = component.scheduleGroup.controls[0].get('scheduleStartTimeUTC')
-      control?.setValue('14:-30')
-      
-      expect(control?.hasError('invalidFormat')).toBe(true)
-    }))
-
-    it('should return error for invalid format', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
-      fixture.detectChanges()
-      tick()
-
-      const control = component.scheduleGroup.controls[0].get('scheduleStartTimeUTC')
-      control?.setValue('invalid')
-      
-      expect(control?.hasError('invalidFormat')).toBe(true)
-    }))
-
-    it('should return null for non-string value', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
-      fixture.detectChanges()
-      tick()
-
-      const control = component.scheduleGroup.controls[0].get('scheduleStartTimeUTC')
-      control?.setValue(null)
-      
-      expect(control?.errors).toBeNull()
-    }))
-  })
-
-  describe('customOptions', () => {
-    it('should have sunrise and sunset options', () => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
-      fixture.detectChanges()
-
-      expect(component.customOptions.length).toBe(2)
-      expect(component.customOptions[0].label).toBe('Sunrise')
-      expect(component.customOptions[0].value).toBe('SR')
-      expect(component.customOptions[1].label).toBe('Sunset')
-      expect(component.customOptions[1].value).toBe('SS')
+      expect(mockToastService.clearToast).toHaveBeenCalled()
     })
   })
 
   describe('Edge Cases', () => {
-    it('should handle multiple schedule groups', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
+    it('should handle model with no startTime', fakeAsync(() => {
+      const modelWithoutStartTime = { ...mockFaaNotamModel, startTime: undefined }
+      fixture.componentRef.setInput('model', modelWithoutStartTime)
       fixture.detectChanges()
       tick()
-
-      component.addScheduleGroup()
-      component.addScheduleGroup()
-
-      expect(component.scheduleGroup.length).toBeGreaterThan(2)
-    }))
-
-    it('should handle null model', fakeAsync(() => {
-      fixture.componentRef.setInput('model', null)
-      fixture.detectChanges()
-      tick()
-
-      expect(component.scheduleGroup.length).toBe(1)
-    }))
-
-    it('should handle boundary time values', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
-      fixture.detectChanges()
-      tick()
-
-      const control = component.scheduleGroup.controls[0].get('scheduleStartTimeUTC')
       
-      // Test boundary: 00:00
-      control?.setValue('00:00')
-      expect(control?.hasError('invalidFormat')).toBe(false)
+      expect(component.form.get('startTime')?.value).toBe('')
+    }))
 
-      // Test boundary: 23:59
-      control?.setValue('23:59')
-      expect(control?.hasError('invalidFormat')).toBe(false)
+    it('should handle model with no endTime', fakeAsync(() => {
+      const modelWithoutEndTime = { ...mockFaaNotamModel, endTime: undefined }
+      fixture.componentRef.setInput('model', modelWithoutEndTime)
+      fixture.detectChanges()
+      tick()
+      
+      expect(component.form.get('endTime')?.value).toBe('')
+    }))
+
+    it('should handle povResponse$ with unknown status', fakeAsync(() => {
+      fixture.detectChanges()
+      tick()
+      
+      const unknownResponse: PovResponse = {
+        status: 'unknown'
+      }
+      
+      povResponseSubject.next(unknownResponse)
+      tick()
+      
+      // Should not throw error
+      expect(component).toBeDefined()
     }))
   })
 })
