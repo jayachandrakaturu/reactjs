@@ -7,7 +7,7 @@ import { NotamHubStore } from '../../store/notam-hub.store'
 import { ToastService } from '../../../../utils/service/toast.service'
 import { FaaNotamModel, PreviewModel } from '../../models'
 
-fdescribe('ScheduleTimeComponent', () => {
+describe('ScheduleTimeComponent', () => {
   let component: ScheduleTimeComponent
   let fixture: ComponentFixture<ScheduleTimeComponent>
   let mockNotamHubStore: jasmine.SpyObj<NotamHubStore>
@@ -305,12 +305,12 @@ fdescribe('ScheduleTimeComponent', () => {
       fixture.detectChanges()
       tick()
 
-      component.addScheduleGroup()
-      component.scheduleGroup.controls[0].get('scheduleDays')?.setValue('DLY')
-      component.scheduleGroup.controls[1].get('scheduleDays')?.setValue('TUE')
-      component.isDailySelected = true
+      component.addScheduleGroup();
+      component.scheduleGroup.controls[0].get('scheduleDays')?.setValue('DLY');
+      component.scheduleGroup.controls[1].get('scheduleDays')?.setValue('TUE');
+      component.isDailySelected = true;
       
-      (component as ScheduleTimeComponent)['setScheduleDay']()
+      (component as ScheduleTimeComponent)['setScheduleDay']();
 
       expect(component.scheduleGroup.controls[1].get('scheduleDays')?.value).toBe('DLY')
     }))
@@ -320,12 +320,12 @@ fdescribe('ScheduleTimeComponent', () => {
       fixture.detectChanges()
       tick()
 
-      component.addScheduleGroup()
-      component.scheduleGroup.controls[0].get('scheduleDays')?.setValue('MON')
-      component.scheduleGroup.controls[1].get('scheduleDays')?.setValue('DLY')
-      component.isDailySelected = false
+      component.addScheduleGroup();
+      component.scheduleGroup.controls[0].get('scheduleDays')?.setValue('MON');
+      component.scheduleGroup.controls[1].get('scheduleDays')?.setValue('DLY');
+      component.isDailySelected = false;
       
-      (component as ScheduleTimeComponent)['setScheduleDay']()
+      (component as ScheduleTimeComponent)['setScheduleDay']();
 
       expect(component.scheduleGroup.controls[1].get('scheduleDays')?.value).toBe('MON')
     }))
