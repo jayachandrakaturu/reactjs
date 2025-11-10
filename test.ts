@@ -1,256 +1,189 @@
 import { CommonModule } from '@angular/common'
-import { ChangeDetectionStrategy, Component, DestroyRef, inject, input, OnInit } from '@angular/core'
+import { ChangeDetectionStrategy, Component, DestroyRef, inject, input, OnDestroy, OnInit, ViewChild } from '@angular/core'
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop'
-import { AbstractControl, FormArray, FormBuilder, FormControl, FormGroup, FormsModule, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms'
-import { MatAutocompleteModule } from '@angular/material/autocomplete'
+import { FormBuilder, FormControl, FormGroup, FormGroupDirective, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms'
+// eslint-disable-next-line import/order
+import { provideMomentDateAdapter } from '@angular/material-moment-adapter'
 import { MatButtonModule } from '@angular/material/button'
-import { MatCardTitle } from '@angular/material/card'
+import { MatCheckboxChange, MatCheckboxModule } from '@angular/material/checkbox'
+import { provideNativeDateAdapter } from '@angular/material/core'
+import { MatDatepickerModule } from '@angular/material/datepicker'
+import { MatDialog } from '@angular/material/dialog'
 import { MatFormFieldModule } from '@angular/material/form-field'
 import { MatIconModule } from '@angular/material/icon'
 import { MatInputModule } from '@angular/material/input'
-import { MatSelectModule } from '@angular/material/select'
-import { MatTimepickerOption } from '@angular/material/timepicker'
-import { distinctUntilChanged, Observable } from 'rxjs'
+import moment from 'moment'
+import { debounceTime, distinctUntilChanged, EMPTY, filter, merge, Observable } from 'rxjs'
+import { AlertBoxComponent } from '../../../../utils/components/alert-box/alert-box.component'
+import { TimeControlComponent } from '../../../../utils/components/time-control/time-control.component'
 import { ToastService } from '../../../../utils/service/toast.service'
 import { startEndDateTimeValidator } from '../../../validators/schedule-validate.service'
 import * as models from '../../models'
-import { FaaNotamModel, PreviewModel } from '../../models'
+import { FaaNotamModel } from '../../models'
 import { NotamHubStore } from '../../store/notam-hub.store'
-
-export interface ScheduleDataItem {
-  scheduleDays: string
-  scheduleStartTimeUTC: string
-  scheduleEndTimeUTC: string
-}
-
-export interface ScheduleFormValue {
-  scheduleData: ScheduleDataItem[]
-}
-
+import { LocaltimeLookupDialogComponent } from '../localtime-lookup-dialog/localtime-lookup-dialog.component'
+import { ScheduleTimeComponent } from './schedule-time.component'
 @Component({
-  standalone: true,
-  selector: 'app-schedule-time',
-  changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true, selector: 'app-navaid-period-of-validity',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  providers: [provideNativeDateAdapter(),
+  provideMomentDateAdapter(undefined, { useUtc: true }),
+  ],
   imports: [
     MatFormFieldModule,
     MatInputModule,
-    MatSelectModule,
     MatButtonModule,
     CommonModule,
     FormsModule,
     ReactiveFormsModule,
+    MatCheckboxModule,
     MatIconModule,
-    MatAutocompleteModule,
-    MatCardTitle
+    MatDatepickerModule,
+    TimeControlComponent,
+    AlertBoxComponent,
+    ScheduleTimeComponent
   ],
-  templateUrl: './schedule-time.component.html'
+  templateUrl: './navaid-period-of-validity.component.html'
 })
-export class ScheduleTimeComponent implements OnInit {
-  public scheduleForm!: FormGroup
+export class NavaidPeriodOfValidityComponent implements OnInit, OnDestroy {
+  @ViewChild(ScheduleTimeComponent) scheduleTimeComponent!: ScheduleTimeComponent
+  public form!: FormGroup
   public model = input<FaaNotamModel | null>()
-  public scheduleDays$: Observable<string[]> | undefined
-  public validScheduleData$!: Observable<PreviewModel | null>
-  public errorMessage$!: Observable<string | null>
-  public isTimeScheduleValid$!: Observable<boolean>
-  public isDailySelected = false
-  public customOptions: MatTimepickerOption[] = [
-    { label: 'Sunrise', value: 'SR' },
-    { label: 'Sunset', value: 'SS' }
-  ]
-  public timeRange: string[] = []
   private destroyRef = inject(DestroyRef)
-
-  public constructor(
-    private readonly formBuilder: FormBuilder,
-    private readonly notamHubStore: NotamHubStore,
-    private readonly toastService: ToastService
-  ) {
-  }
-
-  public ngOnInit(): void {
-    this.setTimeRange()
+  private readonly dialog = inject(MatDialog)
+  public constructor(
+    private readonly formBuilder: FormBuilder,
+    private readonly formGroupDirective: FormGroupDirective,
+    private readonly notamHubStore: NotamHubStore,
+    private readonly toastService: ToastService
+  ) {
+  }
+public ngOnInit(): void {
+    this.form = this.formGroupDirective.form
     this.buildForm()
-    this.scheduleDays$ = this.notamHubStore.scheduleDays$
-    this.validScheduleData$ = this.notamHubStore.previewState$
-    this.errorMessage$ = this.notamHubStore.errorMessage$
-    this.isTimeScheduleValid$ = this.notamHubStore.isTimeScheduleValid$
-
-    const notamModel = this.model()!
-    this.setNotamScheduleModel(notamModel)
-
-    this.scheduleGroup?.controls[0]?.get('scheduleDays')?.valueChanges.pipe(
+    this.notamHubStore.povResponse$.pipe(
       takeUntilDestroyed(this.destroyRef)
-    ).subscribe(() => {
-      this.setDailySelected()
-      this.setScheduleDay()
-    })
-
-    this.scheduleGroup?.valueChanges.pipe(
-      takeUntilDestroyed(this.destroyRef),
-      distinctUntilChanged()
-    ).subscribe(() => {
-      this.notamHubStore.patchState({ isTimeScheduleValid: false })
-    })
-  }
-
-  public addScheduleGroup(): void {
-    this.scheduleGroup.push(this.createScheduleGroup())
-  }
-
-  public deleteScheduleGroup(index: number): void {
-    this.scheduleGroup.removeAt(index)
-    if (this.scheduleGroup.length === 0) {
-      this.resetSchedule()
-    }
-  }
-
-  public resetSchedule(): void {
-    this.scheduleForm.removeControl('scheduleData')
-    const group = this.createScheduleGroup()
-    this.buildScheduleForm(group)
-  }
-
-  public get scheduleGroup(): FormArray {
-    return this.scheduleForm.get('scheduleData') as FormArray
-  }
-
-  public validateScheduleOnClick(): void {
-    if (this.checkScheduleGroupComplete()) {
-      this.notamHubStore.resetPovResponse()
-      const val = new models.ScheduleModel(this.scheduleForm.value)
-      this.notamHubStore.checkTimeSchedule(val)
-    }
-  }
-
-  public getScheduleFormValue(): ScheduleFormValue {
-    return this.scheduleForm.value
-  }
-
-  private setNotamScheduleModel(notamModel: FaaNotamModel): void {
-    //display notam model data to time schedule formarray
-    if (notamModel?.scheduleData && notamModel.scheduleData.length > 0) {
-      notamModel?.scheduleData?.forEach(schedule => {
-        const group = this.createScheduleGroup()
-        group.patchValue({
-          scheduleDays: schedule?.scheduleDays,
-          scheduleStartTimeUTC: schedule?.scheduleStartTimeUTC,
-          scheduleEndTimeUTC: schedule?.scheduleEndTimeUTC,
+    ).subscribe(data => {
+      if (data?.status === 'failure') {
+        this.toastService.showToast(data.errors.map(error => error).join(', '), 'error')
+        this.form.setErrors({ 'periodOfValidityError': true })
+        return EMPTY
+      }
+      if (data?.status === 'correction') {
+        this.form.patchValue({
+          startTime: moment(data.data.startTime).utc(),
+          endTime: moment(data.data.endTime).utc()
         })
-        group.markAsDirty({ onlySelf: true })
-        if (this.scheduleGroup?.length > 0) {
-          this.scheduleGroup.push(group)
-        } else {
-          this.buildScheduleForm(group)
+        this.form.get('periodOfValidityError')?.setErrors(null)
+        this.toastService.showToast('Period of Validity has been updated per schedule.', 'warning')
+        return EMPTY
+      }
+      if (data?.status === 'success') {
+        this.form.get('periodOfValidityError')?.setErrors(null)
+        this.toastService.clearToast()
+        return EMPTY
+      }
+      return EMPTY
+    })
+    this.notamHubStore.success$.pipe(
+      takeUntilDestroyed(this.destroyRef),
+      distinctUntilChanged()).subscribe(success => {
+        if (success) {
+          this.toastService.clearToast()
         }
       })
-    } else {
-      const group = this.createScheduleGroup()
-      this.buildScheduleForm(group)
+    const notamModel = this.model()!
+    this.form.get('isStartUponActivation')?.valueChanges.pipe(
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe((value) => {
+      if (value) {
+        this.form.get('startTime')?.setValue('')
+        this.form.get('startTime')?.disable()
+      } else {
+        this.form.get('startTime')?.enable()
+      }
+    })
+    this.notamHubStore.success$.pipe(
+      takeUntilDestroyed(this.destroyRef),
+      filter(success => !!success)
+    ).subscribe(() => {
+      // once notam saved or submitted is success, then need to clear the time schedule
+      if (this.scheduleTimeComponent) {
+        this.scheduleTimeComponent.resetSchedule()
+      }
+    })
+    this.form.patchValue({
+      isStartUponActivation: notamModel?.isStartUponActivation,
+      startTime: notamModel?.startTime ? moment(notamModel?.startTime).utc() : '',
+      endTime: notamModel?.endTime ? moment(notamModel?.endTime).utc() : '',
+      validity: notamModel?.scheduleData?.length > 0 ? true : false
+    })
+    if (this.form.get('validity')?.value === false) {
+      this.notamHubStore.patchState({ isTimeScheduleValid: true })
     }
-    //setting isDailyselected property
-    this.setDailySelected()
-  }
-
-  private buildScheduleForm(group: FormGroup): void {
-    const scheduleData = new FormArray([group])
-    this.scheduleForm?.addControl('scheduleData', scheduleData)
-  }
-
-  private setDailySelected(): void {
-    if (this.scheduleGroup?.controls?.length >= 1) {
-      const option = this.scheduleGroup.controls[0].get('scheduleDays')?.value
-      this.isDailySelected = option === 'DLY' ? true : false
-    }
-  }
-
-  private setScheduleDay(): void {
-    const val = this.scheduleGroup.controls[0].get('scheduleDays')?.value
-    if (this.isDailySelected) {
-      this.scheduleGroup.controls.forEach(cntrl => {
-        if (cntrl.get('scheduleDays')?.value !== 'DLY') {
-          cntrl.patchValue({
-            scheduleDays: val
-          })
-        }
-      })
-    } else {
-      this.scheduleGroup.controls.forEach(cntrl => {
-        if (cntrl.get('scheduleDays')?.value === 'DLY') {
-          cntrl.patchValue({
-            scheduleDays: val
-          })
-        }
-      })
-    }
-  }
-
-  private checkScheduleGroupComplete(): boolean {
-    return this.scheduleGroup.controls.every(ctrl => {
-      const value = ctrl.value
-      return value.scheduleDays &&
-        value.scheduleStartTimeUTC &&
-        value.scheduleEndTimeUTC
+    merge(
+      this.form.get('startTime')!.valueChanges,
+      this.form.get('endTime')!.valueChanges
+    ).pipe(
+      takeUntilDestroyed(this.destroyRef),
+      debounceTime(0) // Use debounceTime to wait for the event loop to update control validity
+    ).subscribe(() => {
+      if (this.form.get('startTime')!.valid || this.form.get('endTime')!.valid) {
+        //calling get schedule days service
+        this.setAndValidateScheduleData()
+      }
     })
   }
-
-  private createScheduleGroup(): FormGroup {
-    return this.formBuilder.group({
-      scheduleDays: new FormControl('', { validators: [Validators.required], nonNullable: true }),
-      scheduleStartTimeUTC: new FormControl('', {
-        validators:
-          [Validators.required, this.timeRangevalidator(), startEndDateTimeValidator('scheduleEndTimeUTC', true)],
-        nonNullable: true
-      }),
-      scheduleEndTimeUTC: new FormControl('', {
-        validators:
-          [Validators.required, this.timeRangevalidator(), startEndDateTimeValidator('scheduleStartTimeUTC', false)],
-        nonNullable: true
-      }),
-    }, { updateOn: 'blur' })
+public resetValidity(): void {
+    this.form.get('isStartUponActivation')?.reset()
+    this.form.get('startTime')?.reset()
+    this.form.get('endTime')?.reset()
   }
-
+public onCheckboxChange(event: MatCheckboxChange): void {
+    this.notamHubStore.patchState({ isTimeScheduleValid: !event.checked })
+    // calling get schedule days service when checkbox is checked
+    if (event.checked) {
+      this.getScheduleDays()
+    }
+  }
+public openLocalTimeDialog(): void {
+    const dialogRef = this.dialog.open(LocaltimeLookupDialogComponent, {
+      minWidth: '60vw', minHeight: '30vh', panelClass: 'shared-dialog-panel',
+      data: {
+        startTime: this.form.get('startTime')?.value,
+        endTime: this.form.get('endTime')?.value
+      }
+    })
+    dialogRef.afterClosed()
+  }
+  public setAndValidateScheduleData(): void {
+    if (this.form.get('validity')?.value) {
+      this.getScheduleDays() // fetching scheduleDay based on POV start/End Date only if schedule is enable
+    }
+  }
+  public ngOnDestroy(): void {
+    this.toastService.clearToast()
+  }
+  public validatePeriodOfValidityData(): void {
+    this.notamHubStore.resetPovResponse()
+    const val = new models.PeriodOfValidityModel(this.form.value)
+    this.notamHubStore.checkPeriodOfValidity(val)
+  }
+  private getScheduleDays(): void {
+    const startTime = this.form.get('isStartUponActivation')?.value ? moment().toISOString() : this.form.get('startTime')?.value.toISOString()
+    const endTime = this.form.get('endTime')?.value.toISOString()
+    this.notamHubStore.fetchscheduleDays({ startTime: startTime, endTime: endTime })
+  }
   private buildForm(): void {
-    this.scheduleForm = new FormGroup({})
-  }
-
-  private setTimeRange(): void {
-    for (let h = 0; h < 24; h++) {
-      for (let m = 0; m < 60; m += 15) {
-        const hour = h.toString().padStart(2, '0')
-        const minute = m.toString().padStart(2, '0')
-        this.timeRange.push(`${hour}:${minute}`)
-      }
-    }
-  }
-
-  //time schedule custom validation
-  private timeRangevalidator(): ValidatorFn {
-    return (control: AbstractControl): ValidationErrors | null => {
-      const value = control.value
-      if (!value || typeof value !== 'string') {
-        return null
-      }
-      if (value === 'SR' || value === 'SS') {
-        return null
-      }
-      //checking for HH:MM
-      const regex = /^-?\d{1,2}:\d{2}$/
-      if (!regex.test(value)) {
-        return { invalidFormat: 'Time must be in HH:MM format' }
-      }
-      const [hourStr, minuteStr] = value.split(':')
-      const hour = parseInt(hourStr, 10)
-      const minute = parseInt(minuteStr, 10)
-      //checking for min 00 - 59
-      if (minute < 0 || minute > 59) {
-        return { invalidFormat: 'Minutes must be between 00 and 59' }
-      }
-      //checking for hr 00 - 23
-      if (hour < 0 || hour > 23) {
-        return { invalidFormat: 'Hour must be between 00 and 23' }
-      }
-      return null
-    }
+    this.form = new FormGroup({
+      isStartUponActivation: new FormControl({ value: true, disabled: true }),
+      notMonitorCondition: new FormControl(false),
+      startTime: new FormControl({ value: '', disabled: true }, {
+        validators:
+          [Validators.required, startEndDateTimeValidator('endTime', true)], updateOn: 'blur'
+      }),
+      endTime: new FormControl('', { validators: [Validators.required, startEndDateTimeValidator('startTime', false)], updateOn: 'blur' }),
+      validity: new FormControl('')
+    })
   }
 }
-
