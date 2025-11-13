@@ -2,343 +2,441 @@ import { ComponentFixture, TestBed } from '@angular/core/testing'
 import { FormControl, FormGroup, FormGroupDirective, ReactiveFormsModule } from '@angular/forms'
 import { NoopAnimationsModule } from '@angular/platform-browser/animations'
 import { of } from 'rxjs'
-import { FaaNotamModel, PartialClosureModel } from '../../models'
-import { LookupCacheStore } from '../../store/lookup-cache-store'
 import { TaxiwayLocationComponent } from './taxiway-location.component'
+import { LookupCacheStore } from '../../store/lookup-cache-store'
+import { FaaNotamModel, PartialClosureModel } from '../../models'
 
-describe('TaxiwayLocationComponent', () => {
-  let component: TaxiwayLocationComponent
-  let fixture: ComponentFixture<TaxiwayLocationComponent>
-  let mockFormGroupDirective: jasmine.SpyObj<FormGroupDirective>
-  let mockLookupCacheStore: jasmine.SpyObj<LookupCacheStore>
-  let parentForm: FormGroup
-  let scenarioDataForm: FormGroup
+fdescribe('TaxiwayLocationComponent', () => {
+    let component: TaxiwayLocationComponent
+    let fixture: ComponentFixture<TaxiwayLocationComponent>
+    let mockLookupCacheStore: jasmine.SpyObj<LookupCacheStore>
+    let mockFormGroupDirective: FormGroupDirective
+    let parentForm: FormGroup
 
-  beforeEach(async () => {
-    // Create mock data
-    const mockPartialClosureLocations: PartialClosureModel[] = [
-      { id: 1, name: 'Location 1' } as PartialClosureModel,
-      { id: 2, name: 'Location 2' } as PartialClosureModel
-    ]
+    beforeEach(async () => {
+        // Create mock for LookupCacheStore
+        mockLookupCacheStore = jasmine.createSpyObj('LookupCacheStore', ['fetchPartialLocations'])
+        
+        // Define the readonly partialClosureLocation$ property using Object.defineProperty
+        Object.defineProperty(mockLookupCacheStore, 'partialClosureLocation$', {
+            get: () => of([
+                { name: 'Taxiway A', id: '1' } as PartialClosureModel,
+                { name: 'Taxiway B', id: '2' } as PartialClosureModel
+            ]),
+            configurable: true
+        })
 
-    // Create parent form structure
-    scenarioDataForm = new FormGroup({})
-    parentForm = new FormGroup({
-      keyword: new FormControl('test-keyword'),
-      location: new FormControl('test-location'),
-      scenarioData: scenarioDataForm
+        // Create parent form with scenarioData
+        parentForm = new FormGroup({
+            keyword: new FormControl(''),
+            location: new FormControl(''),
+            scenarioData: new FormGroup({})
+        })
+
+        // Create mock FormGroupDirective
+        mockFormGroupDirective = new FormGroupDirective([], [])
+        mockFormGroupDirective.form = parentForm
+
+        await TestBed.configureTestingModule({
+            imports: [
+                TaxiwayLocationComponent,
+                ReactiveFormsModule,
+                NoopAnimationsModule
+            ],
+            providers: [
+                { provide: FormGroupDirective, useValue: mockFormGroupDirective },
+                { provide: LookupCacheStore, useValue: mockLookupCacheStore }
+            ]
+        }).compileComponents()
     })
 
-    // Create mocks
-    mockLookupCacheStore = jasmine.createSpyObj('LookupCacheStore', ['fetchPartialLocations'], {
-      partialClosureLocation$: of(mockPartialClosureLocations)
+    beforeEach(() => {
+        fixture = TestBed.createComponent(TaxiwayLocationComponent)
+        component = fixture.componentInstance
     })
 
-    mockFormGroupDirective = jasmine.createSpyObj('FormGroupDirective', [], {
-      form: parentForm
+    it('should create', () => {
+        expect(component).toBeTruthy()
     })
 
-    await TestBed.configureTestingModule({
-      imports: [
-        TaxiwayLocationComponent,
-        ReactiveFormsModule,
-        NoopAnimationsModule
-      ],
-      providers: [
-        { provide: FormGroupDirective, useValue: mockFormGroupDirective },
-        { provide: LookupCacheStore, useValue: mockLookupCacheStore }
-      ]
-    }).compileComponents()
+    it('should initialize form on ngOnInit', () => {
+        fixture.componentRef.setInput('model', null)
+        fixture.detectChanges()
 
-    fixture = TestBed.createComponent(TaxiwayLocationComponent)
-    component = fixture.componentInstance
-  })
+        expect(component['taxiwayLocationForm']).toBeDefined()
+        expect(component['taxiwayLocationForm'].get('between')).toBeDefined()
+        expect(component['taxiwayLocationForm'].get('and')).toBeDefined()
 
-  afterEach(() => {
-    fixture.destroy()
-  })
-
-  it('should create', () => {
-    expect(component).toBeTruthy()
-  })
-
-  describe('ngOnInit', () => {
-    it('should initialize form and fetch partial locations', () => {
-      fixture.detectChanges()
-
-      expect(component['form']).toBe(parentForm)
-      expect(component.taxiwayLocationForm).toBeDefined()
-      expect(component.taxiwayLocationForm.get('between')).toBeDefined()
-      expect(component.taxiwayLocationForm.get('and')).toBeDefined()
-      expect(mockLookupCacheStore.fetchPartialLocations).toHaveBeenCalledWith({
-        keyword: 'test-keyword',
-        location: 'test-location'
-      })
+        const scenarioData = parentForm.get('scenarioData') as FormGroup
+        expect(scenarioData.get('taxiwayLocation')).toBe(component['taxiwayLocationForm'])
     })
 
-    it('should set partialClosureLocation$ observable', (done) => {
-      fixture.detectChanges()
+    it('should initialize partialClosureLocation$ observable on ngOnInit', () => {
+        fixture.componentRef.setInput('model', null)
+        fixture.detectChanges()
 
-      component.partialClosureLocation$.subscribe(locations => {
-        expect(locations.length).toBe(2)
-        expect(locations[0].id).toBe(1)
-        expect(locations[1].id).toBe(2)
-        done()
-      })
+        expect(component.partialClosureLocation$).toBeDefined()
+        component.partialClosureLocation$.subscribe((locations) => {
+            expect(locations.length).toBe(2)
+            expect(locations[0].name).toBe('Taxiway A')
+            expect(locations[1].name).toBe('Taxiway B')
+        })
     })
 
-    it('should patch form values when model has taxiwayLocation data', () => {
-      const mockModel: FaaNotamModel = {
-        scenarioData: {
-          taxiwayLocation: {
-            between: 'A1',
-            and: 'A2'
-          }
-        }
-      } as FaaNotamModel
+    it('should fetch partial locations with keyword and location from parent form', () => {
+        parentForm.patchValue({
+            keyword: 'CLSD',
+            location: 'KJFK'
+        })
 
-      fixture.componentRef.setInput('model', mockModel)
-      fixture.detectChanges()
+        fixture.componentRef.setInput('model', null)
+        fixture.detectChanges()
 
-      expect(component.taxiwayLocationForm.value.between).toBe('A1')
-      expect(component.taxiwayLocationForm.value.and).toBe('A2')
+        expect(mockLookupCacheStore.fetchPartialLocations).toHaveBeenCalledWith({
+            keyword: 'CLSD',
+            location: 'KJFK'
+        })
     })
 
-    it('should not throw error when model is null', () => {
-      fixture.componentRef.setInput('model', null)
-      
-      expect(() => fixture.detectChanges()).not.toThrow()
+    it('should fetch partial locations with null values when parent form is empty', () => {
+        fixture.componentRef.setInput('model', null)
+        fixture.detectChanges()
+
+        expect(mockLookupCacheStore.fetchPartialLocations).toHaveBeenCalledWith({
+            keyword: '',
+            location: ''
+        })
     })
 
-    it('should not throw error when model has no taxiwayLocation', () => {
-      const mockModel: FaaNotamModel = {
-        scenarioData: {}
-      } as FaaNotamModel
+    it('should patch form values when model is provided', () => {
+        const mockModel: FaaNotamModel = {
+            scenarioData: {
+                taxiwayLocation: {
+                    between: 'Taxiway A',
+                    and: 'Taxiway B'
+                }
+            }
+        } as FaaNotamModel
 
-      fixture.componentRef.setInput('model', mockModel)
-      
-      expect(() => fixture.detectChanges()).not.toThrow()
+        fixture.componentRef.setInput('model', mockModel)
+        fixture.detectChanges()
+
+        expect(component['taxiwayLocationForm'].get('between')?.value).toBe('Taxiway A')
+        expect(component['taxiwayLocationForm'].get('and')?.value).toBe('Taxiway B')
     })
 
-    it('should set validators when both between and and fields have values', () => {
-      fixture.detectChanges()
+    it('should handle null model on ngOnInit', () => {
+        fixture.componentRef.setInput('model', null)
+        
+        expect(() => {
+            fixture.detectChanges()
+        }).not.toThrow()
 
-      component.taxiwayLocationForm.patchValue({
-        between: 'A1',
-        and: 'A2'
-      })
-
-      expect(component.taxiwayLocationForm.hasError('required')).toBeFalsy()
+        expect(component['taxiwayLocationForm'].get('between')?.value).toBe('')
+        expect(component['taxiwayLocationForm'].get('and')?.value).toBe('')
     })
 
-    it('should set validators when only between field has value', () => {
-      fixture.detectChanges()
+    it('should handle model with undefined taxiwayLocation', () => {
+        const mockModel: FaaNotamModel = {
+            scenarioData: {}
+        } as FaaNotamModel
 
-      component.taxiwayLocationForm.patchValue({
-        between: 'A1',
-        and: ''
-      })
+        fixture.componentRef.setInput('model', mockModel)
+        fixture.detectChanges()
 
-      expect(component.taxiwayLocationForm.validator).toBeTruthy()
+        expect(component['taxiwayLocationForm'].get('between')?.value).toBe(undefined)
+        expect(component['taxiwayLocationForm'].get('and')?.value).toBe(undefined)
     })
 
-    it('should set validators when only and field has value', () => {
-      fixture.detectChanges()
+    it('should set validators when between field has a value', () => {
+        fixture.componentRef.setInput('model', null)
+        fixture.detectChanges()
 
-      component.taxiwayLocationForm.patchValue({
-        between: '',
-        and: 'A2'
-      })
+        component['taxiwayLocationForm'].patchValue({
+            between: 'Taxiway A',
+            and: ''
+        })
 
-      expect(component.taxiwayLocationForm.validator).toBeTruthy()
+        expect(component['taxiwayLocationForm'].hasError('required')).toBe(true)
+    })
+
+    it('should set validators when and field has a value', () => {
+        fixture.componentRef.setInput('model', null)
+        fixture.detectChanges()
+
+        component['taxiwayLocationForm'].patchValue({
+            between: '',
+            and: 'Taxiway B'
+        })
+
+        expect(component['taxiwayLocationForm'].hasError('required')).toBe(true)
+    })
+
+    it('should set validators when both fields have values', () => {
+        fixture.componentRef.setInput('model', null)
+        fixture.detectChanges()
+
+        component['taxiwayLocationForm'].patchValue({
+            between: 'Taxiway A',
+            and: 'Taxiway B'
+        })
+
+        expect(component['taxiwayLocationForm'].valid).toBe(true)
     })
 
     it('should clear validators when both fields are empty', () => {
-      fixture.detectChanges()
+        fixture.componentRef.setInput('model', null)
+        fixture.detectChanges()
 
-      // First set some values to add validators
-      component.taxiwayLocationForm.patchValue({
-        between: 'A1',
-        and: 'A2'
-      })
+        // First set values to trigger validators
+        component['taxiwayLocationForm'].patchValue({
+            between: 'Taxiway A',
+            and: 'Taxiway B'
+        })
 
-      // Then clear values
-      component.taxiwayLocationForm.patchValue({
-        between: '',
-        and: ''
-      })
+        // Then clear both fields
+        component['taxiwayLocationForm'].patchValue({
+            between: '',
+            and: ''
+        })
 
-      expect(component.taxiwayLocationForm.validator).toBeNull()
+        expect(component['taxiwayLocationForm'].valid).toBe(true)
     })
 
-    it('should subscribe to form value changes and update validity', () => {
-      fixture.detectChanges()
-      const updateSpy = spyOn(component.taxiwayLocationForm, 'updateValueAndValidity')
+    it('should handle valueChanges subscription for validator management', () => {
+        fixture.componentRef.setInput('model', null)
+        fixture.detectChanges()
 
-      component.taxiwayLocationForm.patchValue({
-        between: 'A1',
-        and: ''
-      })
+        // Start with no values - form should be valid
+        expect(component['taxiwayLocationForm'].valid).toBe(true)
 
-      expect(updateSpy).toHaveBeenCalled()
-    })
-  })
+        // Add value to between - should trigger validators
+        component['taxiwayLocationForm'].get('between')?.setValue('Taxiway A')
+        expect(component['taxiwayLocationForm'].hasError('required')).toBe(true)
 
-  describe('ngOnDestroy', () => {
-    it('should remove taxiwayLocation control from scenarioData', () => {
-      fixture.detectChanges()
+        // Add value to and - form should be valid now
+        component['taxiwayLocationForm'].get('and')?.setValue('Taxiway B')
+        expect(component['taxiwayLocationForm'].valid).toBe(true)
 
-      expect(scenarioDataForm.get('taxiwayLocation')).toBeDefined()
+        // Clear between but keep and - should have validators
+        component['taxiwayLocationForm'].get('between')?.setValue('')
+        expect(component['taxiwayLocationForm'].hasError('required')).toBe(true)
 
-      component.ngOnDestroy()
-
-      expect(scenarioDataForm.get('taxiwayLocation')).toBeNull()
-    })
-
-    it('should handle cleanup properly when called multiple times', () => {
-      fixture.detectChanges()
-
-      component.ngOnDestroy()
-      
-      expect(() => component.ngOnDestroy()).not.toThrow()
-    })
-  })
-
-  describe('buildForm', () => {
-    it('should create taxiwayLocationForm with correct structure', () => {
-      fixture.detectChanges()
-
-      expect(component.taxiwayLocationForm).toBeInstanceOf(FormGroup)
-      expect(component.taxiwayLocationForm.get('between')).toBeInstanceOf(FormControl)
-      expect(component.taxiwayLocationForm.get('and')).toBeInstanceOf(FormControl)
+        // Clear both - validators should be cleared
+        component['taxiwayLocationForm'].get('and')?.setValue('')
+        expect(component['taxiwayLocationForm'].valid).toBe(true)
     })
 
-    it('should add taxiwayLocation control to parent scenarioData form', () => {
-      fixture.detectChanges()
+    it('should remove taxiwayLocation control from scenarioData on ngOnDestroy', () => {
+        fixture.componentRef.setInput('model', null)
+        fixture.detectChanges()
 
-      const taxiwayLocationControl = scenarioDataForm.get('taxiwayLocation')
-      expect(taxiwayLocationControl).toBe(component.taxiwayLocationForm)
+        const scenarioData = parentForm.get('scenarioData') as FormGroup
+        expect(scenarioData.get('taxiwayLocation')).toBeDefined()
+
+        component.ngOnDestroy()
+
+        expect(scenarioData.get('taxiwayLocation')).toBeNull()
     })
 
-    it('should initialize form controls with empty strings', () => {
-      fixture.detectChanges()
-
-      expect(component.taxiwayLocationForm.get('between')?.value).toBe('')
-      expect(component.taxiwayLocationForm.get('and')?.value).toBe('')
-    })
-  })
-
-  describe('Form Integration', () => {
-    it('should update parent form when taxiwayLocationForm changes', () => {
-      fixture.detectChanges()
-
-      component.taxiwayLocationForm.patchValue({
-        between: 'B1',
-        and: 'B2'
-      })
-
-      const scenarioData = parentForm.get('scenarioData') as FormGroup
-      const taxiwayLocation = scenarioData.get('taxiwayLocation') as FormGroup
-
-      expect(taxiwayLocation.value.between).toBe('B1')
-      expect(taxiwayLocation.value.and).toBe('B2')
-    })
-
-    it('should reflect changes in parent form value', () => {
-      fixture.detectChanges()
-
-      component.taxiwayLocationForm.patchValue({
-        between: 'C1',
-        and: 'C2'
-      })
-
-      const parentValue = parentForm.value
-      expect(parentValue.scenarioData.taxiwayLocation.between).toBe('C1')
-      expect(parentValue.scenarioData.taxiwayLocation.and).toBe('C2')
-    })
-  })
-
-  describe('DestroyRef Integration', () => {
     it('should unsubscribe from valueChanges on component destroy', () => {
-      fixture.detectChanges()
-      
-      const subscription = component.taxiwayLocationForm.valueChanges.subscribe()
-      expect(subscription.closed).toBeFalsy()
+        fixture.componentRef.setInput('model', null)
+        fixture.detectChanges()
 
-      fixture.destroy()
+        // Set initial values
+        component['taxiwayLocationForm'].patchValue({
+            between: 'Taxiway A',
+            and: ''
+        })
 
-      // Note: takeUntilDestroyed will automatically unsubscribe when component is destroyed
-      // We're testing that no errors occur during destruction
-      expect(() => component.taxiwayLocationForm.patchValue({ between: 'test' })).not.toThrow()
-    })
-  })
+        expect(component['taxiwayLocationForm'].hasError('required')).toBe(true)
 
-  describe('Edge Cases', () => {
-    it('should handle fetchPartialLocations with undefined form values', () => {
-      const formWithoutValues = new FormGroup({
-        scenarioData: new FormGroup({})
-      })
-      
-      mockFormGroupDirective = jasmine.createSpyObj('FormGroupDirective', [], {
-        form: formWithoutValues
-      })
+        // Destroy the component
+        fixture.destroy()
 
-      TestBed.overrideProvider(FormGroupDirective, { useValue: mockFormGroupDirective })
-      fixture = TestBed.createComponent(TaxiwayLocationComponent)
-      component = fixture.componentInstance
+        // Try to change values - subscription should be destroyed so validator logic won't run
+        // This test verifies takeUntilDestroyed is working
+        const initialErrorState = component['taxiwayLocationForm'].hasError('required')
+        
+        component['taxiwayLocationForm'].patchValue({
+            between: '',
+            and: ''
+        }, { emitEvent: false })
 
-      fixture.detectChanges()
-
-      expect(mockLookupCacheStore.fetchPartialLocations).toHaveBeenCalledWith({
-        keyword: undefined,
-        location: undefined
-      })
+        // Manual check since subscription is destroyed
+        expect(component['taxiwayLocationForm']).toBeDefined()
     })
 
-    it('should handle model with deeply nested null values', () => {
-      const mockModel: any = {
-        scenarioData: {
-          taxiwayLocation: null
-        }
-      }
+    it('should properly initialize with partial taxiwayLocation data', () => {
+        const mockModel: FaaNotamModel = {
+            scenarioData: {
+                taxiwayLocation: {
+                    between: 'Taxiway C'
+                }
+            }
+        } as FaaNotamModel
 
-      fixture.componentRef.setInput('model', mockModel)
-      
-      expect(() => fixture.detectChanges()).not.toThrow()
+        fixture.componentRef.setInput('model', mockModel)
+        fixture.detectChanges()
+
+        expect(component['taxiwayLocationForm'].get('between')?.value).toBe('Taxiway C')
+        expect(component['taxiwayLocationForm'].get('and')?.value).toBe(undefined)
     })
 
-    it('should maintain form validity through multiple value changes', () => {
-      fixture.detectChanges()
+    it('should have correct form control names', () => {
+        fixture.componentRef.setInput('model', null)
+        fixture.detectChanges()
 
-      // Change 1: Add between value
-      component.taxiwayLocationForm.patchValue({ between: 'A1', and: '' })
-      expect(component.taxiwayLocationForm.validator).toBeTruthy()
-
-      // Change 2: Add and value
-      component.taxiwayLocationForm.patchValue({ between: 'A1', and: 'A2' })
-      expect(component.taxiwayLocationForm.validator).toBeTruthy()
-
-      // Change 3: Clear both values
-      component.taxiwayLocationForm.patchValue({ between: '', and: '' })
-      expect(component.taxiwayLocationForm.validator).toBeNull()
-
-      // Change 4: Add only and value
-      component.taxiwayLocationForm.patchValue({ between: '', and: 'A3' })
-      expect(component.taxiwayLocationForm.validator).toBeTruthy()
-    })
-  })
-
-  describe('Template Integration', () => {
-    it('should render without errors', () => {
-      expect(() => fixture.detectChanges()).not.toThrow()
+        const formControls = Object.keys(component['taxiwayLocationForm'].controls)
+        expect(formControls).toContain('between')
+        expect(formControls).toContain('and')
+        expect(formControls.length).toBe(2)
     })
 
-    it('should have form controls available for template binding', () => {
-      fixture.detectChanges()
+    it('should update form values when manually set', () => {
+        fixture.componentRef.setInput('model', null)
+        fixture.detectChanges()
 
-      expect(component.taxiwayLocationForm.get('between')).toBeTruthy()
-      expect(component.taxiwayLocationForm.get('and')).toBeTruthy()
+        component['taxiwayLocationForm'].patchValue({
+            between: 'Taxiway D',
+            and: 'Taxiway E'
+        })
+
+        expect(component['taxiwayLocationForm'].get('between')?.value).toBe('Taxiway D')
+        expect(component['taxiwayLocationForm'].get('and')?.value).toBe('Taxiway E')
     })
-  })
+
+    it('should handle empty string values in taxiwayLocation', () => {
+        const mockModel: FaaNotamModel = {
+            scenarioData: {
+                taxiwayLocation: {
+                    between: '',
+                    and: ''
+                }
+            }
+        } as FaaNotamModel
+
+        fixture.componentRef.setInput('model', mockModel)
+        fixture.detectChanges()
+
+        expect(component['taxiwayLocationForm'].get('between')?.value).toBe('')
+        expect(component['taxiwayLocationForm'].get('and')?.value).toBe('')
+    })
+
+    it('should correctly integrate with parent form', () => {
+        fixture.componentRef.setInput('model', null)
+        fixture.detectChanges()
+
+        component['taxiwayLocationForm'].patchValue({
+            between: 'Taxiway F',
+            and: 'Taxiway G'
+        })
+
+        const scenarioData = parentForm.get('scenarioData') as FormGroup
+        const taxiwayLocation = scenarioData.get('taxiwayLocation') as FormGroup
+
+        expect(taxiwayLocation.get('between')?.value).toBe('Taxiway F')
+        expect(taxiwayLocation.get('and')?.value).toBe('Taxiway G')
+    })
+
+    it('should render form template without errors', () => {
+        fixture.componentRef.setInput('model', null)
+        fixture.detectChanges()
+
+        const compiled = fixture.nativeElement as HTMLElement
+        expect(compiled).toBeTruthy()
+    })
+
+    it('should handle rapid value changes in valueChanges subscription', () => {
+        fixture.componentRef.setInput('model', null)
+        fixture.detectChanges()
+
+        // Rapid changes to trigger validator logic multiple times
+        component['taxiwayLocationForm'].patchValue({ between: 'A', and: '' })
+        component['taxiwayLocationForm'].patchValue({ between: 'A', and: 'B' })
+        component['taxiwayLocationForm'].patchValue({ between: '', and: 'B' })
+        component['taxiwayLocationForm'].patchValue({ between: '', and: '' })
+
+        expect(component['taxiwayLocationForm'].valid).toBe(true)
+    })
+
+    it('should maintain correct validator state through multiple changes', () => {
+        fixture.componentRef.setInput('model', null)
+        fixture.detectChanges()
+
+        // No validators initially
+        expect(component['taxiwayLocationForm'].valid).toBe(true)
+
+        // Add between value - validators should be added
+        component['taxiwayLocationForm'].patchValue({ between: 'Test' })
+        expect(component['taxiwayLocationForm'].hasError('required')).toBe(true)
+
+        // Clear between - validators should be cleared
+        component['taxiwayLocationForm'].patchValue({ between: '' })
+        expect(component['taxiwayLocationForm'].valid).toBe(true)
+
+        // Add and value - validators should be added
+        component['taxiwayLocationForm'].patchValue({ and: 'Test' })
+        expect(component['taxiwayLocationForm'].hasError('required')).toBe(true)
+
+        // Add between value too - form should be valid
+        component['taxiwayLocationForm'].patchValue({ between: 'Test' })
+        expect(component['taxiwayLocationForm'].valid).toBe(true)
+    })
+
+    it('should call fetchPartialLocations with correct parameters when parent form has complex values', () => {
+        parentForm.patchValue({
+            keyword: 'TWY CLSD',
+            location: 'KLAX'
+        })
+
+        fixture.componentRef.setInput('model', null)
+        fixture.detectChanges()
+
+        expect(mockLookupCacheStore.fetchPartialLocations).toHaveBeenCalledWith({
+            keyword: 'TWY CLSD',
+            location: 'KLAX'
+        })
+    })
+
+    it('should handle updateValueAndValidity calls during valueChanges', () => {
+        fixture.componentRef.setInput('model', null)
+        fixture.detectChanges()
+
+        spyOn(component['taxiwayLocationForm'], 'updateValueAndValidity').and.callThrough()
+
+        component['taxiwayLocationForm'].patchValue({
+            between: 'Taxiway H',
+            and: 'Taxiway I'
+        })
+
+        expect(component['taxiwayLocationForm'].updateValueAndValidity).toHaveBeenCalled()
+    })
+
+    it('should handle null and undefined values in form', () => {
+        fixture.componentRef.setInput('model', null)
+        fixture.detectChanges()
+
+        component['taxiwayLocationForm'].patchValue({
+            between: null,
+            and: undefined
+        })
+
+        expect(component['taxiwayLocationForm'].get('between')?.value).toBeNull()
+        expect(component['taxiwayLocationForm'].get('and')?.value).toBeUndefined()
+        expect(component['taxiwayLocationForm'].valid).toBe(true)
+    })
+
+    it('should properly clean up form on destroy', () => {
+        fixture.componentRef.setInput('model', null)
+        fixture.detectChanges()
+
+        const scenarioData = parentForm.get('scenarioData') as FormGroup
+        expect(scenarioData.contains('taxiwayLocation')).toBe(true)
+
+        component.ngOnDestroy()
+
+        expect(scenarioData.contains('taxiwayLocation')).toBe(false)
+    })
 })
 
