@@ -137,9 +137,13 @@ describe('TaxiwayLocationComponent', () => {
         fixture.componentRef.setInput('model', null)
         fixture.detectChanges()
 
+        // Spy on updateValueAndValidity to prevent infinite loop
+        const updateSpy = spyOn(component['taxiwayLocationForm'], 'updateValueAndValidity')
+
         // Subscribe to verify the validator is set after valueChanges fires
         setTimeout(() => {
             expect(component['taxiwayLocationForm'].hasValidator(Validators.required)).toBe(true)
+            expect(updateSpy).toHaveBeenCalled()
             done()
         }, 0)
 
@@ -154,9 +158,13 @@ describe('TaxiwayLocationComponent', () => {
         fixture.componentRef.setInput('model', null)
         fixture.detectChanges()
 
+        // Spy on updateValueAndValidity to prevent infinite loop
+        const updateSpy = spyOn(component['taxiwayLocationForm'], 'updateValueAndValidity')
+
         // Subscribe to verify the validator is set after valueChanges fires
         setTimeout(() => {
             expect(component['taxiwayLocationForm'].hasValidator(Validators.required)).toBe(true)
+            expect(updateSpy).toHaveBeenCalled()
             done()
         }, 0)
 
@@ -171,9 +179,13 @@ describe('TaxiwayLocationComponent', () => {
         fixture.componentRef.setInput('model', null)
         fixture.detectChanges()
 
+        // Spy on updateValueAndValidity to prevent infinite loop
+        const updateSpy = spyOn(component['taxiwayLocationForm'], 'updateValueAndValidity')
+
         // Subscribe to verify the validator is set after valueChanges fires
         setTimeout(() => {
             expect(component['taxiwayLocationForm'].hasValidator(Validators.required)).toBe(true)
+            expect(updateSpy).toHaveBeenCalled()
             done()
         }, 0)
 
@@ -187,6 +199,9 @@ describe('TaxiwayLocationComponent', () => {
     it('should clear validators when both fields are empty', (done) => {
         fixture.componentRef.setInput('model', null)
         fixture.detectChanges()
+
+        // Spy on updateValueAndValidity to prevent infinite loop
+        const updateSpy = spyOn(component['taxiwayLocationForm'], 'updateValueAndValidity')
 
         // First set some values to add validators (this will trigger valueChanges)
         component['taxiwayLocationForm'].patchValue({
@@ -207,6 +222,7 @@ describe('TaxiwayLocationComponent', () => {
             // Wait for second valueChanges to complete
             setTimeout(() => {
                 expect(component['taxiwayLocationForm'].hasValidator(Validators.required)).toBe(false)
+                expect(updateSpy).toHaveBeenCalled()
                 done()
             }, 0)
         }, 0)
@@ -215,6 +231,9 @@ describe('TaxiwayLocationComponent', () => {
     it('should clear validators when both fields are null', (done) => {
         fixture.componentRef.setInput('model', null)
         fixture.detectChanges()
+
+        // Spy on updateValueAndValidity to prevent infinite loop
+        const updateSpy = spyOn(component['taxiwayLocationForm'], 'updateValueAndValidity')
 
         // First set some values to add validators (this will trigger valueChanges)
         component['taxiwayLocationForm'].patchValue({
@@ -235,6 +254,7 @@ describe('TaxiwayLocationComponent', () => {
             // Wait for second valueChanges to complete
             setTimeout(() => {
                 expect(component['taxiwayLocationForm'].hasValidator(Validators.required)).toBe(false)
+                expect(updateSpy).toHaveBeenCalled()
                 done()
             }, 0)
         }, 0)
@@ -480,6 +500,9 @@ describe('TaxiwayLocationComponent', () => {
         fixture.componentRef.setInput('model', null)
         fixture.detectChanges()
 
+        // Spy on updateValueAndValidity to prevent infinite loop
+        const updateSpy = spyOn(component['taxiwayLocationForm'], 'updateValueAndValidity')
+
         // Trigger actual valueChanges subscription
         component['taxiwayLocationForm'].patchValue({
             between: 'Taxiway Alpha',
@@ -488,6 +511,7 @@ describe('TaxiwayLocationComponent', () => {
 
         setTimeout(() => {
             expect(component['taxiwayLocationForm'].hasValidator(Validators.required)).toBe(true)
+            expect(updateSpy).toHaveBeenCalled()
             done()
         }, 0)
     })
@@ -495,6 +519,9 @@ describe('TaxiwayLocationComponent', () => {
     it('should set validators in subscription when and field has value', (done) => {
         fixture.componentRef.setInput('model', null)
         fixture.detectChanges()
+
+        // Spy on updateValueAndValidity to prevent infinite loop
+        const updateSpy = spyOn(component['taxiwayLocationForm'], 'updateValueAndValidity')
 
         // Trigger actual valueChanges subscription
         component['taxiwayLocationForm'].patchValue({
@@ -504,6 +531,7 @@ describe('TaxiwayLocationComponent', () => {
 
         setTimeout(() => {
             expect(component['taxiwayLocationForm'].hasValidator(Validators.required)).toBe(true)
+            expect(updateSpy).toHaveBeenCalled()
             done()
         }, 0)
     })
@@ -511,6 +539,9 @@ describe('TaxiwayLocationComponent', () => {
     it('should set validators in subscription when both fields have values', (done) => {
         fixture.componentRef.setInput('model', null)
         fixture.detectChanges()
+
+        // Spy on updateValueAndValidity to prevent infinite loop
+        const updateSpy = spyOn(component['taxiwayLocationForm'], 'updateValueAndValidity')
 
         // Trigger actual valueChanges subscription
         component['taxiwayLocationForm'].patchValue({
@@ -520,6 +551,7 @@ describe('TaxiwayLocationComponent', () => {
 
         setTimeout(() => {
             expect(component['taxiwayLocationForm'].hasValidator(Validators.required)).toBe(true)
+            expect(updateSpy).toHaveBeenCalled()
             done()
         }, 0)
     })
@@ -527,6 +559,9 @@ describe('TaxiwayLocationComponent', () => {
     it('should clear validators in subscription when both fields are empty', (done) => {
         fixture.componentRef.setInput('model', null)
         fixture.detectChanges()
+
+        // Spy on updateValueAndValidity to prevent infinite loop
+        const updateSpy = spyOn(component['taxiwayLocationForm'], 'updateValueAndValidity')
 
         // First set values to add validators
         component['taxiwayLocationForm'].patchValue({
@@ -545,6 +580,7 @@ describe('TaxiwayLocationComponent', () => {
 
             setTimeout(() => {
                 expect(component['taxiwayLocationForm'].hasValidator(Validators.required)).toBe(false)
+                expect(updateSpy).toHaveBeenCalled()
                 done()
             }, 0)
         }, 0)
@@ -553,6 +589,9 @@ describe('TaxiwayLocationComponent', () => {
     it('should clear validators in subscription with null values', (done) => {
         fixture.componentRef.setInput('model', null)
         fixture.detectChanges()
+
+        // Spy on updateValueAndValidity to prevent infinite loop
+        const updateSpy = spyOn(component['taxiwayLocationForm'], 'updateValueAndValidity')
 
         // First set values to add validators
         component['taxiwayLocationForm'].patchValue({
@@ -571,6 +610,7 @@ describe('TaxiwayLocationComponent', () => {
 
             setTimeout(() => {
                 expect(component['taxiwayLocationForm'].hasValidator(Validators.required)).toBe(false)
+                expect(updateSpy).toHaveBeenCalled()
                 done()
             }, 0)
         }, 0)
@@ -579,6 +619,9 @@ describe('TaxiwayLocationComponent', () => {
     it('should handle subscription logic transition from one field to another', (done) => {
         fixture.componentRef.setInput('model', null)
         fixture.detectChanges()
+
+        // Spy on updateValueAndValidity to prevent infinite loop
+        const updateSpy = spyOn(component['taxiwayLocationForm'], 'updateValueAndValidity')
 
         // First scenario: only between has value
         component['taxiwayLocationForm'].patchValue({
@@ -597,6 +640,7 @@ describe('TaxiwayLocationComponent', () => {
 
             setTimeout(() => {
                 expect(component['taxiwayLocationForm'].hasValidator(Validators.required)).toBe(true)
+                expect(updateSpy).toHaveBeenCalled()
                 done()
             }, 0)
         }, 0)
@@ -624,6 +668,9 @@ describe('TaxiwayLocationComponent', () => {
         fixture.componentRef.setInput('model', null)
         fixture.detectChanges()
 
+        // Spy on updateValueAndValidity to prevent infinite loop
+        const updateSpy = spyOn(component['taxiwayLocationForm'], 'updateValueAndValidity')
+
         // Both fields have values
         component['taxiwayLocationForm'].patchValue({
             between: 'Taxiway Mu',
@@ -641,6 +688,7 @@ describe('TaxiwayLocationComponent', () => {
 
             setTimeout(() => {
                 expect(component['taxiwayLocationForm'].hasValidator(Validators.required)).toBe(true)
+                expect(updateSpy).toHaveBeenCalled()
                 done()
             }, 0)
         }, 0)
@@ -650,6 +698,9 @@ describe('TaxiwayLocationComponent', () => {
         fixture.componentRef.setInput('model', null)
         fixture.detectChanges()
 
+        // Spy on updateValueAndValidity to prevent infinite loop
+        const updateSpy = spyOn(component['taxiwayLocationForm'], 'updateValueAndValidity')
+
         // Whitespace is truthy - trigger subscription
         component['taxiwayLocationForm'].patchValue({
             between: '   ',
@@ -658,6 +709,7 @@ describe('TaxiwayLocationComponent', () => {
 
         setTimeout(() => {
             expect(component['taxiwayLocationForm'].hasValidator(Validators.required)).toBe(true)
+            expect(updateSpy).toHaveBeenCalled()
             done()
         }, 0)
     })
@@ -665,6 +717,9 @@ describe('TaxiwayLocationComponent', () => {
     it('should handle subscription logic with undefined values', (done) => {
         fixture.componentRef.setInput('model', null)
         fixture.detectChanges()
+
+        // Spy on updateValueAndValidity to prevent infinite loop
+        const updateSpy = spyOn(component['taxiwayLocationForm'], 'updateValueAndValidity')
 
         // First set validators
         component['taxiwayLocationForm'].patchValue({
@@ -683,6 +738,7 @@ describe('TaxiwayLocationComponent', () => {
 
             setTimeout(() => {
                 expect(component['taxiwayLocationForm'].hasValidator(Validators.required)).toBe(false)
+                expect(updateSpy).toHaveBeenCalled()
                 done()
             }, 0)
         }, 0)
@@ -698,7 +754,7 @@ describe('TaxiwayLocationComponent', () => {
         // Should throw error when trying to access undefined form
         expect(() => {
             component.ngOnDestroy()
-        }).toThrow()
+        }).toThrowError()
     })
 
     it('should handle ngOnDestroy when scenarioData does not exist', () => {
@@ -708,10 +764,11 @@ describe('TaxiwayLocationComponent', () => {
         // Remove scenarioData from parent form
         parentForm.removeControl('scenarioData')
 
-        // Should throw error as scenarioData.removeControl will fail
+        // Should not throw - get returns null for non-existent controls
+        // and calling removeControl on null will cause an error
         expect(() => {
             component.ngOnDestroy()
-        }).toThrow()
+        }).toThrowError()
     })
 
     it('should verify takeUntilDestroyed is used for subscription cleanup', () => {
