@@ -468,5 +468,259 @@ describe('TaxiwayLocationComponent', () => {
             }
         }).not.toThrow()
     })
+
+    // NEW TESTS FOR MISSING COVERAGE - valueChanges subscription
+    it('should trigger valueChanges subscription and set validators when between has value', (done) => {
+        fixture.componentRef.setInput('model', null)
+        fixture.detectChanges()
+
+        // Initially no validators
+        expect(component['taxiwayLocationForm'].hasValidator(Validators.required)).toBe(false)
+
+        // Patch with emitEvent: true (default) to trigger subscription
+        component['taxiwayLocationForm'].patchValue({
+            between: 'Taxiway Alpha',
+            and: ''
+        })
+
+        // Use setTimeout to allow async subscription to complete
+        setTimeout(() => {
+            expect(component['taxiwayLocationForm'].hasValidator(Validators.required)).toBe(true)
+            done()
+        }, 0)
+    })
+
+    it('should trigger valueChanges subscription and set validators when and has value', (done) => {
+        fixture.componentRef.setInput('model', null)
+        fixture.detectChanges()
+
+        expect(component['taxiwayLocationForm'].hasValidator(Validators.required)).toBe(false)
+
+        component['taxiwayLocationForm'].patchValue({
+            between: '',
+            and: 'Taxiway Beta'
+        })
+
+        setTimeout(() => {
+            expect(component['taxiwayLocationForm'].hasValidator(Validators.required)).toBe(true)
+            done()
+        }, 0)
+    })
+
+    it('should trigger valueChanges subscription and set validators when both fields have values', (done) => {
+        fixture.componentRef.setInput('model', null)
+        fixture.detectChanges()
+
+        component['taxiwayLocationForm'].patchValue({
+            between: 'Taxiway Gamma',
+            and: 'Taxiway Delta'
+        })
+
+        setTimeout(() => {
+            expect(component['taxiwayLocationForm'].hasValidator(Validators.required)).toBe(true)
+            done()
+        }, 0)
+    })
+
+    it('should trigger valueChanges subscription and clear validators when both fields are empty', (done) => {
+        fixture.componentRef.setInput('model', null)
+        fixture.detectChanges()
+
+        // First set values to add validators
+        component['taxiwayLocationForm'].patchValue({
+            between: 'Taxiway Epsilon',
+            and: 'Taxiway Zeta'
+        })
+
+        setTimeout(() => {
+            expect(component['taxiwayLocationForm'].hasValidator(Validators.required)).toBe(true)
+
+            // Now clear values
+            component['taxiwayLocationForm'].patchValue({
+                between: '',
+                and: ''
+            })
+
+            setTimeout(() => {
+                expect(component['taxiwayLocationForm'].hasValidator(Validators.required)).toBe(false)
+                done()
+            }, 0)
+        }, 0)
+    })
+
+    it('should trigger valueChanges subscription with null values and clear validators', (done) => {
+        fixture.componentRef.setInput('model', null)
+        fixture.detectChanges()
+
+        // First set values
+        component['taxiwayLocationForm'].patchValue({
+            between: 'Taxiway Eta',
+            and: 'Taxiway Theta'
+        })
+
+        setTimeout(() => {
+            // Now set null values
+            component['taxiwayLocationForm'].patchValue({
+                between: null,
+                and: null
+            })
+
+            setTimeout(() => {
+                expect(component['taxiwayLocationForm'].hasValidator(Validators.required)).toBe(false)
+                done()
+            }, 0)
+        }, 0)
+    })
+
+    it('should trigger valueChanges subscription when transitioning from one field to another', (done) => {
+        fixture.componentRef.setInput('model', null)
+        fixture.detectChanges()
+
+        // Set only between
+        component['taxiwayLocationForm'].patchValue({
+            between: 'Taxiway Iota',
+            and: ''
+        })
+
+        setTimeout(() => {
+            expect(component['taxiwayLocationForm'].hasValidator(Validators.required)).toBe(true)
+
+            // Clear between and set and
+            component['taxiwayLocationForm'].patchValue({
+                between: '',
+                and: 'Taxiway Kappa'
+            })
+
+            setTimeout(() => {
+                expect(component['taxiwayLocationForm'].hasValidator(Validators.required)).toBe(true)
+                done()
+            }, 0)
+        }, 0)
+    })
+
+    it('should call updateValueAndValidity in valueChanges subscription', (done) => {
+        fixture.componentRef.setInput('model', null)
+        fixture.detectChanges()
+
+        const updateSpy = spyOn(component['taxiwayLocationForm'], 'updateValueAndValidity').and.callThrough()
+
+        component['taxiwayLocationForm'].patchValue({
+            between: 'Taxiway Lambda'
+        })
+
+        setTimeout(() => {
+            expect(updateSpy).toHaveBeenCalled()
+            done()
+        }, 0)
+    })
+
+    it('should handle valueChanges when clearing only one field', (done) => {
+        fixture.componentRef.setInput('model', null)
+        fixture.detectChanges()
+
+        // Set both fields
+        component['taxiwayLocationForm'].patchValue({
+            between: 'Taxiway Mu',
+            and: 'Taxiway Nu'
+        })
+
+        setTimeout(() => {
+            expect(component['taxiwayLocationForm'].hasValidator(Validators.required)).toBe(true)
+
+            // Clear only between, and should still have value
+            component['taxiwayLocationForm'].get('between')?.setValue('')
+
+            setTimeout(() => {
+                // Should still have validators because 'and' has value
+                expect(component['taxiwayLocationForm'].hasValidator(Validators.required)).toBe(true)
+                done()
+            }, 0)
+        }, 0)
+    })
+
+    it('should handle valueChanges with whitespace values', (done) => {
+        fixture.componentRef.setInput('model', null)
+        fixture.detectChanges()
+
+        component['taxiwayLocationForm'].patchValue({
+            between: '   ',
+            and: ''
+        })
+
+        setTimeout(() => {
+            // Whitespace is truthy, so validators should be set
+            expect(component['taxiwayLocationForm'].hasValidator(Validators.required)).toBe(true)
+            done()
+        }, 0)
+    })
+
+    it('should handle multiple rapid valueChanges with subscription', (done) => {
+        fixture.componentRef.setInput('model', null)
+        fixture.detectChanges()
+
+        // Trigger multiple changes rapidly
+        component['taxiwayLocationForm'].patchValue({ between: 'A' })
+        component['taxiwayLocationForm'].patchValue({ between: 'B' })
+        component['taxiwayLocationForm'].patchValue({ between: 'C' })
+
+        setTimeout(() => {
+            // Should still work correctly after multiple rapid changes
+            expect(component['taxiwayLocationForm'].hasValidator(Validators.required)).toBe(true)
+            done()
+        }, 50)
+    })
+
+    it('should handle ngOnDestroy when scenarioData does not exist', () => {
+        fixture.componentRef.setInput('model', null)
+        fixture.detectChanges()
+
+        // Remove scenarioData from parent form
+        parentForm.removeControl('scenarioData')
+
+        // Should not throw error
+        expect(() => {
+            component.ngOnDestroy()
+        }).not.toThrow()
+    })
+
+    it('should handle ngOnDestroy when scenarioData exists but is null', () => {
+        fixture.componentRef.setInput('model', null)
+        fixture.detectChanges()
+
+        // Set scenarioData to null
+        parentForm.setControl('scenarioData', null as any)
+
+        // Should handle gracefully
+        expect(() => {
+            component.ngOnDestroy()
+        }).not.toThrow()
+    })
+
+    it('should properly cleanup on destroy after valueChanges subscription', (done) => {
+        fixture.componentRef.setInput('model', null)
+        fixture.detectChanges()
+
+        const setValidatorsSpy = spyOn(component['taxiwayLocationForm'], 'setValidators').and.callThrough()
+
+        // Trigger a change
+        component['taxiwayLocationForm'].patchValue({ between: 'Test' })
+
+        setTimeout(() => {
+            expect(setValidatorsSpy).toHaveBeenCalled()
+            setValidatorsSpy.calls.reset()
+
+            // Destroy the component
+            fixture.destroy()
+
+            // Try to trigger change after destroy (subscription should be unsubscribed)
+            component['taxiwayLocationForm'].patchValue({ between: 'After Destroy' })
+
+            setTimeout(() => {
+                // setValidators should not be called after destroy due to takeUntilDestroyed
+                expect(setValidatorsSpy).not.toHaveBeenCalled()
+                done()
+            }, 0)
+        }, 0)
+    })
 })
 
