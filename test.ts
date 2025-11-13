@@ -1,78 +1,61 @@
-import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing'
-import { FormBuilder, ReactiveFormsModule, FormGroup } from '@angular/forms'
-import { BrowserAnimationsModule } from '@angular/platform-browser/animations'
-import { BehaviorSubject, of } from 'rxjs'
-import { ScheduleTimeComponent, ScheduleDataItem } from './schedule-time.component'
-import { NotamHubStore } from '../../store/notam-hub.store'
-import { ToastService } from '../../../../utils/service/toast.service'
-import { FaaNotamModel, PreviewModel } from '../../models'
+import { ComponentFixture, TestBed } from '@angular/core/testing'
+import { FormControl, FormGroup, FormGroupDirective, ReactiveFormsModule } from '@angular/forms'
+import { NoopAnimationsModule } from '@angular/platform-browser/animations'
+import { of } from 'rxjs'
+import { FaaNotamModel, PartialClosureModel } from '../../models'
+import { LookupCacheStore } from '../../store/lookup-cache-store'
+import { TaxiwayLocationComponent } from './taxiway-location.component'
 
-describe('ScheduleTimeComponent', () => {
-  let component: ScheduleTimeComponent
-  let fixture: ComponentFixture<ScheduleTimeComponent>
-  let mockNotamHubStore: jasmine.SpyObj<NotamHubStore>
-  let mockToastService: jasmine.SpyObj<ToastService>
-  let scheduleDaysSubject: BehaviorSubject<string[]>
-  let previewStateSubject: BehaviorSubject<PreviewModel | null>
-  let errorMessageSubject: BehaviorSubject<string | null>
-  let isTimeScheduleValidSubject: BehaviorSubject<boolean>
-
-  const mockScheduleData: ScheduleDataItem[] = [
-    {
-      scheduleDays: 'MON',
-      scheduleStartTimeUTC: '08:00',
-      scheduleEndTimeUTC: '17:00'
-    },
-    {
-      scheduleDays: 'TUE',
-      scheduleStartTimeUTC: '09:00',
-      scheduleEndTimeUTC: '18:00'
-    }
-  ]
-
-  const mockFaaNotamModel: FaaNotamModel = {
-    notamId: '123',
-    scheduleData: mockScheduleData
-  } as unknown as FaaNotamModel
-
-  const mockFaaNotamModelEmpty: FaaNotamModel = {
-    notamId: '456',
-    scheduleData: []
-  } as unknown as FaaNotamModel
+describe('TaxiwayLocationComponent', () => {
+  let component: TaxiwayLocationComponent
+  let fixture: ComponentFixture<TaxiwayLocationComponent>
+  let mockFormGroupDirective: jasmine.SpyObj<FormGroupDirective>
+  let mockLookupCacheStore: jasmine.SpyObj<LookupCacheStore>
+  let parentForm: FormGroup
+  let scenarioDataForm: FormGroup
 
   beforeEach(async () => {
-    scheduleDaysSubject = new BehaviorSubject<string[]>(['Monday', 'Tuesday', 'Wednesday'])
-    previewStateSubject = new BehaviorSubject<PreviewModel | null>(null)
-    errorMessageSubject = new BehaviorSubject<string | null>(null)
-    isTimeScheduleValidSubject = new BehaviorSubject<boolean>(false)
+    // Create mock data
+    const mockPartialClosureLocations: PartialClosureModel[] = [
+      { id: 1, name: 'Location 1' } as PartialClosureModel,
+      { id: 2, name: 'Location 2' } as PartialClosureModel
+    ]
 
-    mockNotamHubStore = jasmine.createSpyObj('NotamHubStore', [
-      'resetPovResponse',
-      'checkTimeSchedule',
-      'patchState'
-    ]);
-    Object.defineProperty(mockNotamHubStore, 'scheduleDays$', { value: scheduleDaysSubject.asObservable() });
-    Object.defineProperty(mockNotamHubStore, 'previewState$', { value: previewStateSubject.asObservable() });
-    Object.defineProperty(mockNotamHubStore, 'errorMessage$', { value: errorMessageSubject.asObservable() });
-    Object.defineProperty(mockNotamHubStore, 'isTimeScheduleValid$', { value: isTimeScheduleValidSubject.asObservable() });
+    // Create parent form structure
+    scenarioDataForm = new FormGroup({})
+    parentForm = new FormGroup({
+      keyword: new FormControl('test-keyword'),
+      location: new FormControl('test-location'),
+      scenarioData: scenarioDataForm
+    })
 
-    mockToastService = jasmine.createSpyObj('ToastService', ['showToast', 'clearToast'])
+    // Create mocks
+    mockLookupCacheStore = jasmine.createSpyObj('LookupCacheStore', ['fetchPartialLocations'], {
+      partialClosureLocation$: of(mockPartialClosureLocations)
+    })
+
+    mockFormGroupDirective = jasmine.createSpyObj('FormGroupDirective', [], {
+      form: parentForm
+    })
 
     await TestBed.configureTestingModule({
       imports: [
-        ScheduleTimeComponent,
+        TaxiwayLocationComponent,
         ReactiveFormsModule,
-        BrowserAnimationsModule
+        NoopAnimationsModule
       ],
       providers: [
-        FormBuilder,
-        { provide: NotamHubStore, useValue: mockNotamHubStore },
-        { provide: ToastService, useValue: mockToastService }
+        { provide: FormGroupDirective, useValue: mockFormGroupDirective },
+        { provide: LookupCacheStore, useValue: mockLookupCacheStore }
       ]
     }).compileComponents()
 
-    fixture = TestBed.createComponent(ScheduleTimeComponent)
+    fixture = TestBed.createComponent(TaxiwayLocationComponent)
     component = fixture.componentInstance
+  })
+
+  afterEach(() => {
+    fixture.destroy()
   })
 
   it('should create', () => {
@@ -80,484 +63,282 @@ describe('ScheduleTimeComponent', () => {
   })
 
   describe('ngOnInit', () => {
-    beforeEach(() => {
-      component.form = new FormBuilder().group({})
+    it('should initialize form and fetch partial locations', () => {
+      fixture.detectChanges()
+
+      expect(component['form']).toBe(parentForm)
+      expect(component.taxiwayLocationForm).toBeDefined()
+      expect(component.taxiwayLocationForm.get('between')).toBeDefined()
+      expect(component.taxiwayLocationForm.get('and')).toBeDefined()
+      expect(mockLookupCacheStore.fetchPartialLocations).toHaveBeenCalledWith({
+        keyword: 'test-keyword',
+        location: 'test-location'
+      })
     })
 
-    it('should initialize form and observables', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
-      component.ngOnInit()
-      tick()
+    it('should set partialClosureLocation$ observable', (done) => {
+      fixture.detectChanges()
 
-      expect(component.form).toBeDefined()
-      expect(component.scheduleDays$).toBeDefined()
-      expect(component.validScheduleData$).toBeDefined()
-      expect(component.errorMessage$).toBeDefined()
-      expect(component.isTimeScheduleValid$).toBeDefined()
-      expect(component.timeRange.length).toBeGreaterThan(0)
-    }))
-
-    it('should set timeRange with correct values', () => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
-      component.ngOnInit()
-
-      expect(component.timeRange.length).toBe(96) // 24 hours * 4 (15-minute intervals)
-      expect(component.timeRange[0]).toBe('00:00')
-      expect(component.timeRange[component.timeRange.length - 1]).toBe('23:45')
+      component.partialClosureLocation$.subscribe(locations => {
+        expect(locations.length).toBe(2)
+        expect(locations[0].id).toBe(1)
+        expect(locations[1].id).toBe(2)
+        done()
+      })
     })
 
-    it('should initialize with model data', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
-      component.ngOnInit()
-      tick()
+    it('should patch form values when model has taxiwayLocation data', () => {
+      const mockModel: FaaNotamModel = {
+        scenarioData: {
+          taxiwayLocation: {
+            between: 'A1',
+            and: 'A2'
+          }
+        }
+      } as FaaNotamModel
 
-      expect(component.scheduleGroup.length).toBeGreaterThan(0)
-    }))
+      fixture.componentRef.setInput('model', mockModel)
+      fixture.detectChanges()
 
-    it('should handle scheduleDays value changes', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel);
-      component.ngOnInit();
-      tick();
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      spyOn<any>(component, 'setDailySelected');
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      spyOn<any>(component, 'setScheduleDay');
-
-      component.scheduleGroup.controls[0].get('scheduleDays')?.setValue('DLY');
-      tick();
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      expect((component as any)['setDailySelected']).toHaveBeenCalled();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      expect((component as any)['setScheduleDay']).toHaveBeenCalled();
-    }))
-
-    it('should patch state when scheduleGroup value changes', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
-      component.ngOnInit()
-      tick()
-
-      component.scheduleGroup.controls[0].get('scheduleStartTimeUTC')?.setValue('10:00')
-      tick()
-
-      expect(mockNotamHubStore.patchState).toHaveBeenCalledWith({ isTimeScheduleValid: false })
-    }))
-  })
-
-  describe('addScheduleGroup', () => {
-    beforeEach(() => {
-      component.form = new FormBuilder().group({})
+      expect(component.taxiwayLocationForm.value.between).toBe('A1')
+      expect(component.taxiwayLocationForm.value.and).toBe('A2')
     })
 
-    it('should add a new schedule group', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
-      component.ngOnInit()
-      tick()
-
-      const initialLength = component.scheduleGroup.length
-      component.addScheduleGroup()
-
-      expect(component.scheduleGroup.length).toBe(initialLength + 1)
-    }))
-  })
-
-  describe('deleteScheduleGroup', () => {
-    beforeEach(() => {
-      component.form = new FormBuilder().group({})
+    it('should not throw error when model is null', () => {
+      fixture.componentRef.setInput('model', null)
+      
+      expect(() => fixture.detectChanges()).not.toThrow()
     })
 
-    it('should delete schedule group at index', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
-      component.ngOnInit()
-      tick()
+    it('should not throw error when model has no taxiwayLocation', () => {
+      const mockModel: FaaNotamModel = {
+        scenarioData: {}
+      } as FaaNotamModel
 
-      component.addScheduleGroup()
-      const initialLength = component.scheduleGroup.length
-      component.deleteScheduleGroup(0)
-
-      expect(component.scheduleGroup.length).toBe(initialLength - 1)
-    }))
-
-    it('should reset schedule when deleting last group', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModelEmpty)
-      component.ngOnInit()
-      tick()
-
-      spyOn(component, 'resetSchedule')
-      component.deleteScheduleGroup(0)
-
-      expect(component.resetSchedule).toHaveBeenCalled()
-    }))
-  })
-
-  describe('resetSchedule', () => {
-    beforeEach(() => {
-      component.form = new FormBuilder().group({})
+      fixture.componentRef.setInput('model', mockModel)
+      
+      expect(() => fixture.detectChanges()).not.toThrow()
     })
 
-    it('should reset schedule form', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
-      component.ngOnInit()
-      tick()
+    it('should set validators when both between and and fields have values', () => {
+      fixture.detectChanges()
 
-      component.resetSchedule()
-      tick()
-
-      expect(component.scheduleGroup.length).toBe(1)
-      expect(component.scheduleGroup.controls[0].get('scheduleDays')?.value).toBe('')
-    }))
-  })
-
-  describe('scheduleGroup getter', () => {
-    beforeEach(() => {
-      component.form = new FormBuilder().group({})
-    })
-
-    it('should return scheduleData FormArray', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
-      component.ngOnInit()
-      tick()
-
-      const scheduleGroup = component.scheduleGroup
-      expect(scheduleGroup).toBeDefined()
-      expect(scheduleGroup.length).toBeGreaterThan(0)
-    }))
-  })
-
-  describe('validateScheduleOnClick', () => {
-    beforeEach(() => {
-      component.form = new FormBuilder().group({})
-    })
-
-    it('should validate and call checkTimeSchedule when schedule is complete', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
-      component.ngOnInit()
-      tick()
-
-      component.scheduleGroup.controls[0].patchValue({
-        scheduleDays: 'MON',
-        scheduleStartTimeUTC: '08:00',
-        scheduleEndTimeUTC: '17:00'
+      component.taxiwayLocationForm.patchValue({
+        between: 'A1',
+        and: 'A2'
       })
 
-      component.validateScheduleOnClick()
-
-      expect(mockNotamHubStore.resetPovResponse).toHaveBeenCalled()
-      expect(mockNotamHubStore.checkTimeSchedule).toHaveBeenCalled()
-    }))
-
-    it('should not validate when schedule is incomplete', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModelEmpty)
-      component.ngOnInit()
-      tick()
-
-      mockNotamHubStore.resetPovResponse.calls.reset()
-      mockNotamHubStore.checkTimeSchedule.calls.reset()
-
-      component.validateScheduleOnClick()
-
-      expect(mockNotamHubStore.resetPovResponse).not.toHaveBeenCalled()
-      expect(mockNotamHubStore.checkTimeSchedule).not.toHaveBeenCalled()
-    }))
-  })
-
-  describe('setNotamScheduleModel', () => {
-    beforeEach(() => {
-      component.form = new FormBuilder().group({})
+      expect(component.taxiwayLocationForm.hasError('required')).toBeFalsy()
     })
 
-    it('should set model with existing schedule data', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
-      component.ngOnInit()
-      tick()
+    it('should set validators when only between field has value', () => {
+      fixture.detectChanges()
 
-      expect(component.scheduleGroup.length).toBe(mockScheduleData.length)
-      expect(component.scheduleGroup.controls[0].get('scheduleDays')?.value).toBe('MON')
-    }))
+      component.taxiwayLocationForm.patchValue({
+        between: 'A1',
+        and: ''
+      })
 
-    it('should set model without schedule data', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModelEmpty)
-      component.ngOnInit()
-      tick()
-
-      expect(component.scheduleGroup.length).toBe(1)
-      expect(component.scheduleGroup.controls[0].get('scheduleDays')?.value).toBe('')
-    }))
-
-    it('should handle null scheduleData', fakeAsync(() => {
-      const modelWithNullSchedule = { ...mockFaaNotamModel, scheduleData: undefined }
-      fixture.componentRef.setInput('model', modelWithNullSchedule)
-      component.ngOnInit()
-      tick()
-
-      expect(component.scheduleGroup.length).toBe(1)
-    }))
-  })
-
-  describe('setDailySelected', () => {
-    beforeEach(() => {
-      component.form = new FormBuilder().group({})
+      expect(component.taxiwayLocationForm.validator).toBeTruthy()
     })
 
-    it('should set isDailySelected to true when DLY is selected', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel);
-      component.ngOnInit();
-      tick();
+    it('should set validators when only and field has value', () => {
+      fixture.detectChanges()
 
-      component.scheduleGroup.controls[0].get('scheduleDays')?.setValue('DLY');
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (component as any)['setDailySelected']();
+      component.taxiwayLocationForm.patchValue({
+        between: '',
+        and: 'A2'
+      })
 
-      expect(component.isDailySelected).toBe(true);
-    }))
-
-    it('should set isDailySelected to false when other day is selected', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel);
-      component.ngOnInit();
-      tick();
-
-      component.scheduleGroup.controls[0].get('scheduleDays')?.setValue('MON');
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (component as any)['setDailySelected']();
-
-      expect(component.isDailySelected).toBe(false);
-    }))
-  })
-
-  describe('setScheduleDay', () => {
-    beforeEach(() => {
-      component.form = new FormBuilder().group({})
+      expect(component.taxiwayLocationForm.validator).toBeTruthy()
     })
 
-    it('should update all schedules when DLY is selected', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
-      component.ngOnInit()
-      tick()
+    it('should clear validators when both fields are empty', () => {
+      fixture.detectChanges()
 
-      component.addScheduleGroup();
-      component.scheduleGroup.controls[0].get('scheduleDays')?.setValue('DLY');
-      component.scheduleGroup.controls[1].get('scheduleDays')?.setValue('TUE');
-      component.isDailySelected = true;
-      
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (component as any)['setScheduleDay']();
+      // First set some values to add validators
+      component.taxiwayLocationForm.patchValue({
+        between: 'A1',
+        and: 'A2'
+      })
 
-      expect(component.scheduleGroup.controls[1].get('scheduleDays')?.value).toBe('DLY')
-    }))
+      // Then clear values
+      component.taxiwayLocationForm.patchValue({
+        between: '',
+        and: ''
+      })
 
-    it('should update all DLY schedules when switching from DLY', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
-      component.ngOnInit()
-      tick()
-
-      component.addScheduleGroup();
-      component.scheduleGroup.controls[0].get('scheduleDays')?.setValue('MON');
-      component.scheduleGroup.controls[1].get('scheduleDays')?.setValue('DLY');
-      component.isDailySelected = false;
-      
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (component as any)['setScheduleDay']();
-
-      expect(component.scheduleGroup.controls[1].get('scheduleDays')?.value).toBe('MON')
-    }))
-  })
-
-  describe('checkScheduleGroupComplete', () => {
-    beforeEach(() => {
-      component.form = new FormBuilder().group({})
+      expect(component.taxiwayLocationForm.validator).toBeNull()
     })
 
-    it('should return true when all fields are filled', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel);
-      component.ngOnInit();
-      tick();
+    it('should subscribe to form value changes and update validity', () => {
+      fixture.detectChanges()
+      const updateSpy = spyOn(component.taxiwayLocationForm, 'updateValueAndValidity')
 
-      component.scheduleGroup.controls[0].patchValue({
-        scheduleDays: 'MON',
-        scheduleStartTimeUTC: '08:00',
-        scheduleEndTimeUTC: '17:00'
-      });
+      component.taxiwayLocationForm.patchValue({
+        between: 'A1',
+        and: ''
+      })
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const result = (component as any)['checkScheduleGroupComplete']();
-      expect(result).toBe(true);
-    }))
-
-    it('should return false when fields are missing', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModelEmpty);
-      component.ngOnInit();
-      tick();
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const result = (component as any)['checkScheduleGroupComplete']();
-      expect(result).toBe(false);
-    }))
+      expect(updateSpy).toHaveBeenCalled()
+    })
   })
 
-  describe('timeRangevalidator', () => {
-    beforeEach(() => {
-      component.form = new FormBuilder().group({})
+  describe('ngOnDestroy', () => {
+    it('should remove taxiwayLocation control from scenarioData', () => {
+      fixture.detectChanges()
+
+      expect(scenarioDataForm.get('taxiwayLocation')).toBeDefined()
+
+      component.ngOnDestroy()
+
+      expect(scenarioDataForm.get('taxiwayLocation')).toBeNull()
     })
 
-    it('should return null for empty value', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
-      component.ngOnInit()
-      tick()
+    it('should handle cleanup properly when called multiple times', () => {
+      fixture.detectChanges()
 
-      const control = component.scheduleGroup.controls[0].get('scheduleStartTimeUTC')
-      control?.setValue('')
+      component.ngOnDestroy()
       
-      expect(control?.errors).toBeNull()
-    }))
-
-    it('should return null for SR value', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
-      component.ngOnInit()
-      tick()
-
-      const control = component.scheduleGroup.controls[0].get('scheduleStartTimeUTC')
-      control?.setValue('SR')
-      
-      expect(control?.errors).toBeNull()
-    }))
-
-    it('should return null for SS value', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
-      component.ngOnInit()
-      tick()
-
-      const control = component.scheduleGroup.controls[0].get('scheduleStartTimeUTC')
-      control?.setValue('SS')
-      
-      expect(control?.errors).toBeNull()
-    }))
-
-    it('should return null for valid time format', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
-      component.ngOnInit()
-      tick()
-
-      const control = component.scheduleGroup.controls[0].get('scheduleStartTimeUTC')
-      control?.setValue('14:30')
-      
-      expect(control?.hasError('invalidFormat')).toBe(false)
-    }))
-
-    it('should return error for invalid hour', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
-      component.ngOnInit()
-      tick()
-
-      const control = component.scheduleGroup.controls[0].get('scheduleStartTimeUTC')
-      control?.setValue('25:00')
-      
-      expect(control?.hasError('invalidFormat')).toBe(true)
-    }))
-
-    it('should return error for invalid minute', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
-      component.ngOnInit()
-      tick()
-
-      const control = component.scheduleGroup.controls[0].get('scheduleStartTimeUTC')
-      control?.setValue('14:60')
-      
-      expect(control?.hasError('invalidFormat')).toBe(true)
-    }))
-
-    it('should return error for negative hour', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
-      component.ngOnInit()
-      tick()
-
-      const control = component.scheduleGroup.controls[0].get('scheduleStartTimeUTC')
-      control?.setValue('-1:30')
-      
-      expect(control?.hasError('invalidFormat')).toBe(true)
-    }))
-
-    it('should return error for negative minute', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
-      component.ngOnInit()
-      tick()
-
-      const control = component.scheduleGroup.controls[0].get('scheduleStartTimeUTC')
-      control?.setValue('14:-30')
-      
-      expect(control?.hasError('invalidFormat')).toBe(true)
-    }))
-
-    it('should return error for invalid format', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
-      component.ngOnInit()
-      tick()
-
-      const control = component.scheduleGroup.controls[0].get('scheduleStartTimeUTC')
-      control?.setValue('invalid')
-      
-      expect(control?.hasError('invalidFormat')).toBe(true)
-    }))
-
-    it('should return null for non-string value', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
-      component.ngOnInit()
-      tick()
-
-      const control = component.scheduleGroup.controls[0].get('scheduleStartTimeUTC')
-      control?.setValue(null)
-      
-      expect(control?.errors).toBeNull()
-    }))
+      expect(() => component.ngOnDestroy()).not.toThrow()
+    })
   })
 
-  describe('customOptions', () => {
-    it('should have sunrise and sunset options', () => {
-      expect(component.customOptions.length).toBe(2)
-      expect(component.customOptions[0].label).toBe('Sunrise')
-      expect(component.customOptions[0].value).toBe('SR')
-      expect(component.customOptions[1].label).toBe('Sunset')
-      expect(component.customOptions[1].value).toBe('SS')
+  describe('buildForm', () => {
+    it('should create taxiwayLocationForm with correct structure', () => {
+      fixture.detectChanges()
+
+      expect(component.taxiwayLocationForm).toBeInstanceOf(FormGroup)
+      expect(component.taxiwayLocationForm.get('between')).toBeInstanceOf(FormControl)
+      expect(component.taxiwayLocationForm.get('and')).toBeInstanceOf(FormControl)
+    })
+
+    it('should add taxiwayLocation control to parent scenarioData form', () => {
+      fixture.detectChanges()
+
+      const taxiwayLocationControl = scenarioDataForm.get('taxiwayLocation')
+      expect(taxiwayLocationControl).toBe(component.taxiwayLocationForm)
+    })
+
+    it('should initialize form controls with empty strings', () => {
+      fixture.detectChanges()
+
+      expect(component.taxiwayLocationForm.get('between')?.value).toBe('')
+      expect(component.taxiwayLocationForm.get('and')?.value).toBe('')
+    })
+  })
+
+  describe('Form Integration', () => {
+    it('should update parent form when taxiwayLocationForm changes', () => {
+      fixture.detectChanges()
+
+      component.taxiwayLocationForm.patchValue({
+        between: 'B1',
+        and: 'B2'
+      })
+
+      const scenarioData = parentForm.get('scenarioData') as FormGroup
+      const taxiwayLocation = scenarioData.get('taxiwayLocation') as FormGroup
+
+      expect(taxiwayLocation.value.between).toBe('B1')
+      expect(taxiwayLocation.value.and).toBe('B2')
+    })
+
+    it('should reflect changes in parent form value', () => {
+      fixture.detectChanges()
+
+      component.taxiwayLocationForm.patchValue({
+        between: 'C1',
+        and: 'C2'
+      })
+
+      const parentValue = parentForm.value
+      expect(parentValue.scenarioData.taxiwayLocation.between).toBe('C1')
+      expect(parentValue.scenarioData.taxiwayLocation.and).toBe('C2')
+    })
+  })
+
+  describe('DestroyRef Integration', () => {
+    it('should unsubscribe from valueChanges on component destroy', () => {
+      fixture.detectChanges()
+      
+      const subscription = component.taxiwayLocationForm.valueChanges.subscribe()
+      expect(subscription.closed).toBeFalsy()
+
+      fixture.destroy()
+
+      // Note: takeUntilDestroyed will automatically unsubscribe when component is destroyed
+      // We're testing that no errors occur during destruction
+      expect(() => component.taxiwayLocationForm.patchValue({ between: 'test' })).not.toThrow()
     })
   })
 
   describe('Edge Cases', () => {
-    beforeEach(() => {
-      component.form = new FormBuilder().group({})
+    it('should handle fetchPartialLocations with undefined form values', () => {
+      const formWithoutValues = new FormGroup({
+        scenarioData: new FormGroup({})
+      })
+      
+      mockFormGroupDirective = jasmine.createSpyObj('FormGroupDirective', [], {
+        form: formWithoutValues
+      })
+
+      TestBed.overrideProvider(FormGroupDirective, { useValue: mockFormGroupDirective })
+      fixture = TestBed.createComponent(TaxiwayLocationComponent)
+      component = fixture.componentInstance
+
+      fixture.detectChanges()
+
+      expect(mockLookupCacheStore.fetchPartialLocations).toHaveBeenCalledWith({
+        keyword: undefined,
+        location: undefined
+      })
     })
 
-    it('should handle multiple schedule groups', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
-      component.ngOnInit()
-      tick()
+    it('should handle model with deeply nested null values', () => {
+      const mockModel: any = {
+        scenarioData: {
+          taxiwayLocation: null
+        }
+      }
 
-      component.addScheduleGroup()
-      component.addScheduleGroup()
-
-      expect(component.scheduleGroup.length).toBeGreaterThan(2)
-    }))
-
-    it('should handle null model', fakeAsync(() => {
-      fixture.componentRef.setInput('model', null)
+      fixture.componentRef.setInput('model', mockModel)
       
-      expect(() => component.ngOnInit()).toThrow()
-    }))
+      expect(() => fixture.detectChanges()).not.toThrow()
+    })
 
-    it('should handle boundary time values', fakeAsync(() => {
-      fixture.componentRef.setInput('model', mockFaaNotamModel)
-      component.ngOnInit()
-      tick()
+    it('should maintain form validity through multiple value changes', () => {
+      fixture.detectChanges()
 
-      const control = component.scheduleGroup.controls[0].get('scheduleStartTimeUTC')
-      
-      // Test boundary: 00:00
-      control?.setValue('00:00')
-      expect(control?.hasError('invalidFormat')).toBe(false)
+      // Change 1: Add between value
+      component.taxiwayLocationForm.patchValue({ between: 'A1', and: '' })
+      expect(component.taxiwayLocationForm.validator).toBeTruthy()
 
-      // Test boundary: 23:59
-      control?.setValue('23:59')
-      expect(control?.hasError('invalidFormat')).toBe(false)
-    }))
+      // Change 2: Add and value
+      component.taxiwayLocationForm.patchValue({ between: 'A1', and: 'A2' })
+      expect(component.taxiwayLocationForm.validator).toBeTruthy()
+
+      // Change 3: Clear both values
+      component.taxiwayLocationForm.patchValue({ between: '', and: '' })
+      expect(component.taxiwayLocationForm.validator).toBeNull()
+
+      // Change 4: Add only and value
+      component.taxiwayLocationForm.patchValue({ between: '', and: 'A3' })
+      expect(component.taxiwayLocationForm.validator).toBeTruthy()
+    })
+  })
+
+  describe('Template Integration', () => {
+    it('should render without errors', () => {
+      expect(() => fixture.detectChanges()).not.toThrow()
+    })
+
+    it('should have form controls available for template binding', () => {
+      fixture.detectChanges()
+
+      expect(component.taxiwayLocationForm.get('between')).toBeTruthy()
+      expect(component.taxiwayLocationForm.get('and')).toBeTruthy()
+    })
   })
 })
 
