@@ -233,17 +233,30 @@ describe('TaxiwayLocationComponent', () => {
         fixture.componentRef.setInput('model', null)
         fixture.detectChanges()
 
-        const initialBetweenValue = component['taxiwayLocationForm'].get('between')?.value
+        // Verify validators work before destroy
+        component['taxiwayLocationForm'].patchValue({
+            between: 'Taxiway A',
+            and: ''
+        })
+        expect(component['taxiwayLocationForm'].get('and')?.hasError('required')).toBe(true)
 
         fixture.destroy()
 
+        // After destroy, patching should not trigger validator logic
+        // Clear validators manually to simulate what would happen if subscription was active
+        component['taxiwayLocationForm'].get('between')?.clearValidators()
+        component['taxiwayLocationForm'].get('and')?.clearValidators()
+        component['taxiwayLocationForm'].updateValueAndValidity()
+
+        // Patch with only one value - validators should NOT be applied because subscription is destroyed
         component['taxiwayLocationForm'].patchValue({
-            between: 'New Value'
+            between: 'New Value',
+            and: ''
         })
 
-        // Component is destroyed, so no further updates should occur
-        // This test verifies the subscription is cleaned up
-        expect(component['taxiwayLocationForm'].get('between')?.value).toBe('New Value')
+        // Validators should not have been re-applied because subscription is cleaned up
+        expect(component['taxiwayLocationForm'].get('between')?.hasError('required')).toBe(false)
+        expect(component['taxiwayLocationForm'].get('and')?.hasError('required')).toBe(false)
     })
 
     it('should properly initialize with partial taxiwayLocation data', () => {
