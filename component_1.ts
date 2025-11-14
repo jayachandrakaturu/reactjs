@@ -49,16 +49,16 @@ export class TaxiwayLocationComponent implements OnInit, OnDestroy {
         })
 
         this.taxiwayLocationForm.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(res => {
-            const controls = this.taxiwayLocationForm.controls;
+            const controls = ['between', 'and'];
             if (res.between || res.and) {
                 controls.forEach(control => {
-                    control.setValidators([Validators.required])
-                    control.updateValueAndValidity()
+                    this.taxiwayLocationForm.get(control)?.setValidators([Validators.required])
+                    this.taxiwayLocationForm.get(control)?.updateValueAndValidity()
                 })
             } else {
                 controls.forEach(control => {
-                    control.clearValidators()
-                    control.updateValueAndValidity()
+                    this.taxiwayLocationForm.get(control)?.clearValidators()
+                    this.taxiwayLocationForm.get(control)?.updateValueAndValidity()
                 })
             }
         })
