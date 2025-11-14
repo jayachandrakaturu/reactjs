@@ -1,130 +1,88 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { FormControl, FormGroup, FormGroupDirective, ReactiveFormsModule } from '@angular/forms';
-import { of, Subject } from 'rxjs';
-import { TaxiwayLocationComponent } from './taxiway-location.component';
-import { LookupCacheStore } from '../../store/lookup-cache-store';
-import { DestroyRef } from '@angular/core';
+import { CommonModule } from '@angular/common'
+import { ChangeDetectionStrategy, Component, DestroyRef, inject, input, OnDestroy, OnInit } from '@angular/core'
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop'
+import { FormControl, FormGroup, FormGroupDirective, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms'
+import { MatCheckboxModule } from '@angular/material/checkbox'
+import { MatIconModule } from '@angular/material/icon'
+import { MatInputModule } from '@angular/material/input'
+import { MatSelectModule } from '@angular/material/select'
+import { merge, Observable } from 'rxjs'
+import { FaaNotamModel, PartialClosureModel } from '../../models'
+import { LookupCacheStore } from '../../store/lookup-cache-store'
+@Component({
+    standalone: true, selector: 'app-taxiway-location',
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    imports: [
+        MatInputModule,
+        CommonModule,
+        FormsModule,
+        ReactiveFormsModule,
+        MatSelectModule,
+        MatIconModule,
+        MatCheckboxModule
+    ],
+    templateUrl: './taxiway-location.component.html'
+})
+export class TaxiwayLocationComponent implements OnInit, OnDestroy {
+    protected taxiwayLocationForm!: FormGroup
+    public model = input<FaaNotamModel | null>()
+    public partialClosureLocation$!: Observable<PartialClosureModel[]>
+    private form!: FormGroup
+    private destroyRef = inject(DestroyRef)
+    public constructor(
+        private readonly formGroupDirective: FormGroupDirective,
+        private readonly lookupCacheStore: LookupCacheStore
+    ) { }
 
-describe('TaxiwayLocationComponent', () => {
-  let component: TaxiwayLocationComponent;
-  let fixture: ComponentFixture<TaxiwayLocationComponent>;
+    public ngOnInit(): void {
+        this.form = this.formGroupDirective.form
+        this.buildForm()
 
-  let mockStore: any;
-  let mockFormGroupDirective: any;
+        this.partialClosureLocation$ = this.lookupCacheStore.partialClosureLocation$
 
-  let rootForm: FormGroup;
-  let scenarioData: FormGroup;
+        this.lookupCacheStore.fetchPartialLocations({ keyword: this.form.value?.keyword, location: this.form.value?.location })
 
-  beforeEach(async () => {
-    // mock store
-    mockStore = {
-      partialClosureLocation$: of([{ id: 1, name: 'X' }]),
-      fetchPartialLocations: jasmine.createSpy('fetchPartialLocations'),
-    };
+        const taxiwayLocation = this.model()?.scenarioData.taxiwayLocation
+        this.taxiwayLocationForm.patchValue({
+            between: taxiwayLocation?.between,
+            and: taxiwayLocation?.and
+        })
 
-    // Root form structure
-    scenarioData = new FormGroup({});
-    rootForm = new FormGroup({
-      keyword: new FormControl('TEST_KW'),
-      location: new FormControl('TEST_LOC'),
-      scenarioData: scenarioData
-    });
+        this.setupConditionalValidators()
+    }
 
-    // Mock FormGroupDirective
-    mockFormGroupDirective = {
-      form: rootForm
-    };
+    public ngOnDestroy(): void {
+        const scenarioData = this.form.get('scenarioData') as FormGroup
+        scenarioData.removeControl('taxiwayLocation')
+    }
 
-    // Mock DestroyRef
-    const destroyRefMock = {
-      onDestroy: (fn: () => void) => fn()
-    };
+    private buildForm(): void {
+        this.taxiwayLocationForm = new FormGroup({
+            between: new FormControl(''),
+            and: new FormControl('')
+        })
+        const scenarioData = this.form.get('scenarioData') as FormGroup
+        scenarioData.addControl('taxiwayLocation', this.taxiwayLocationForm)
+    }
 
-    await TestBed.configureTestingModule({
-      imports: [TaxiwayLocationComponent, ReactiveFormsModule],
-      providers: [
-        { provide: LookupCacheStore, useValue: mockStore },
-        { provide: FormGroupDirective, useValue: mockFormGroupDirective },
-        { provide: DestroyRef, useValue: destroyRefMock }
-      ]
-    }).compileComponents();
+    private setupConditionalValidators(): void {
+        const betweenControl = this.taxiwayLocationForm.get('between')
+        const andControl = this.taxiwayLocationForm.get('and')
+        if (!betweenControl || !andControl) return
 
-    fixture = TestBed.createComponent(TaxiwayLocationComponent);
-    component = fixture.componentInstance;
-
-    // mock model() input signal
-    component.model = () =>
-      ({
-        scenarioData: {
-          taxiwayLocation: {
-            between: 'A',
-            and: 'B'
-          }
+        const hasValue = (val: any): boolean => val != null && String(val).trim().length > 0
+        const updateValidators = () => {
+            const isRequired = hasValue(betweenControl.value) || hasValue(andControl.value)
+            const validator = isRequired ? [Validators.required] : null
+            betweenControl.setValidators(validator)
+            andControl.setValidators(validator)
+            betweenControl.updateValueAndValidity({ emitEvent: false })
+            andControl.updateValueAndValidity({ emitEvent: false })
         }
-      }) as any;
 
-    fixture.detectChanges(); // triggers ngOnInit
-  });
-
-  // -------------------------------------------------------------
-  // TESTS
-  // -------------------------------------------------------------
-
-  it('should create component', () => {
-    expect(component).toBeTruthy();
-  });
-
-  it('should initialize form and add taxiwayLocation control', () => {
-    const ctrl = scenarioData.get('taxiwayLocation');
-    expect(ctrl).toBeTruthy();
-    expect(ctrl instanceof FormGroup).toBeTrue();
-  });
-
-  it('should patch model values into form', () => {
-    const taxiForm = scenarioData.get('taxiwayLocation') as FormGroup;
-
-    expect(taxiForm.value).toEqual({
-      between: 'A',
-      and: 'B'
-    });
-  });
-
-  it('should call fetchPartialLocations on init', () => {
-    expect(mockStore.fetchPartialLocations).toHaveBeenCalledWith({
-      keyword: 'TEST_KW',
-      location: 'TEST_LOC'
-    });
-  });
-
-  it('should set validators when between/and have values', () => {
-    const taxiForm = scenarioData.get('taxiwayLocation') as FormGroup;
-
-    taxiForm.patchValue({ between: 'A', and: 'B' });
-
-    fixture.detectChanges();
-
-    taxiForm.updateValueAndValidity();
-
-    expect(taxiForm.get('between')?.hasValidator)?.toBeTruthy;
-    expect(taxiForm.get('and')?.hasValidator)?.toBeTruthy;
-  });
-
-  it('should clear validators when both values empty', () => {
-    const taxiForm = scenarioData.get('taxiwayLocation') as FormGroup;
-
-    taxiForm.patchValue({ between: null, and: null });
-
-    fixture.detectChanges();
-
-    taxiForm.updateValueAndValidity();
-
-    expect(taxiForm.get('between')?.errors).toBeNull();
-    expect(taxiForm.get('and')?.errors).toBeNull();
-  });
-
-  it('should remove taxiwayLocation control on destroy', () => {
-    component.ngOnDestroy();
-
-    expect(scenarioData.get('taxiwayLocation')).toBeNull();
-  });
-});
+        merge(betweenControl.valueChanges, andControl.valueChanges)
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe(updateValidators)
+        updateValidators()
+    }
+}
