@@ -55,15 +55,44 @@ describe('TaxiwayLocationComponent', () => {
         component = fixture.componentInstance
     })
 
+    // Helper function to setup spies on form controls to prevent infinite loop
+    // This mocks updateValueAndValidity to always use emitEvent: false to prevent recursive calls
+    const setupUpdateValueAndValiditySpies = (): void => {
+        const betweenControl = component['taxiwayLocationForm']?.get('between')
+        const andControl = component['taxiwayLocationForm']?.get('and')
+        
+        if (betweenControl) {
+            try {
+                spyOn(betweenControl, 'updateValueAndValidity').and.callFake(function(options?: { onlySelf?: boolean; emitEvent?: boolean }) {
+                    return FormControl.prototype.updateValueAndValidity.call(this, { ...options, emitEvent: false })
+                })
+            } catch (e) {
+                // Already spied, ignore
+            }
+        }
+        
+        if (andControl) {
+            try {
+                spyOn(andControl, 'updateValueAndValidity').and.callFake(function(options?: { onlySelf?: boolean; emitEvent?: boolean }) {
+                    return FormControl.prototype.updateValueAndValidity.call(this, { ...options, emitEvent: false })
+                })
+            } catch (e) {
+                // Already spied, ignore
+            }
+        }
+    }
+
     it('should create', () => {
         fixture.componentRef.setInput('model', null)
         fixture.detectChanges()
+        setupUpdateValueAndValiditySpies()
         expect(component).toBeTruthy()
     })
 
     it('should initialize form on ngOnInit', () => {
         fixture.componentRef.setInput('model', null)
         fixture.detectChanges()
+        setupUpdateValueAndValiditySpies()
 
         expect(component['taxiwayLocationForm']).toBeDefined()
         expect(component['taxiwayLocationForm'].get('between')).toBeDefined()
@@ -85,6 +114,7 @@ describe('TaxiwayLocationComponent', () => {
 
         fixture.componentRef.setInput('model', mockModel)
         fixture.detectChanges()
+        setupUpdateValueAndValiditySpies()
 
         expect(component['taxiwayLocationForm'].get('between')?.value).toBe('Taxiway A')
         expect(component['taxiwayLocationForm'].get('and')?.value).toBe('Taxiway B')
@@ -95,6 +125,7 @@ describe('TaxiwayLocationComponent', () => {
         
         expect(() => {
             fixture.detectChanges()
+            setupUpdateValueAndValiditySpies()
         }).not.toThrow()
 
         expect(component['taxiwayLocationForm'].get('between')?.value).toBe('')
@@ -108,6 +139,7 @@ describe('TaxiwayLocationComponent', () => {
 
         fixture.componentRef.setInput('model', mockModel)
         fixture.detectChanges()
+        setupUpdateValueAndValiditySpies()
 
         expect(component['taxiwayLocationForm'].get('between')?.value).toBe(undefined)
         expect(component['taxiwayLocationForm'].get('and')?.value).toBe(undefined)
@@ -121,6 +153,7 @@ describe('TaxiwayLocationComponent', () => {
 
         fixture.componentRef.setInput('model', null)
         fixture.detectChanges()
+        setupUpdateValueAndValiditySpies()
 
         expect(mockLookupCacheStore.fetchPartialLocations).toHaveBeenCalledWith({
             keyword: 'test',
@@ -131,6 +164,7 @@ describe('TaxiwayLocationComponent', () => {
     it('should remove taxiwayLocation control from scenarioData on ngOnDestroy', () => {
         fixture.componentRef.setInput('model', null)
         fixture.detectChanges()
+        setupUpdateValueAndValiditySpies()
 
         const scenarioData = parentForm.get('scenarioData') as FormGroup
         expect(scenarioData.get('taxiwayLocation')).toBeDefined()
@@ -143,6 +177,7 @@ describe('TaxiwayLocationComponent', () => {
     it('should have correct form control names', () => {
         fixture.componentRef.setInput('model', null)
         fixture.detectChanges()
+        setupUpdateValueAndValiditySpies()
 
         const formControls = Object.keys(component['taxiwayLocationForm'].controls)
         expect(formControls).toContain('between')
@@ -153,6 +188,7 @@ describe('TaxiwayLocationComponent', () => {
     it('should update form values when manually set', () => {
         fixture.componentRef.setInput('model', null)
         fixture.detectChanges()
+        setupUpdateValueAndValiditySpies()
 
         component['taxiwayLocationForm'].patchValue({
             between: 'Taxiway C',
@@ -166,6 +202,7 @@ describe('TaxiwayLocationComponent', () => {
     it('should correctly integrate with parent form', () => {
         fixture.componentRef.setInput('model', null)
         fixture.detectChanges()
+        setupUpdateValueAndValiditySpies()
 
         component['taxiwayLocationForm'].patchValue({
             between: 'Taxiway E',
@@ -182,6 +219,7 @@ describe('TaxiwayLocationComponent', () => {
     it('should initialize partialClosureLocation$ observable', (done) => {
         fixture.componentRef.setInput('model', null)
         fixture.detectChanges()
+        setupUpdateValueAndValiditySpies()
 
         component.partialClosureLocation$.subscribe((locations: PartialClosureModel[]) => {
             expect(locations.length).toBe(2)
@@ -196,6 +234,7 @@ describe('TaxiwayLocationComponent', () => {
         beforeEach(() => {
             fixture.componentRef.setInput('model', null)
             fixture.detectChanges()
+            setupUpdateValueAndValiditySpies()
         })
 
         it('should not have required validators when both fields are empty', () => {
@@ -437,6 +476,7 @@ describe('TaxiwayLocationComponent', () => {
     it('should maintain form validity state correctly', () => {
         fixture.componentRef.setInput('model', null)
         fixture.detectChanges()
+        setupUpdateValueAndValiditySpies()
 
         // Form should be valid when both fields are empty
         expect(component['taxiwayLocationForm'].valid).toBe(true)
@@ -467,6 +507,7 @@ describe('TaxiwayLocationComponent', () => {
 
         fixture.componentRef.setInput('model', mockModel)
         fixture.detectChanges()
+        setupUpdateValueAndValiditySpies()
 
         expect(component['taxiwayLocationForm'].get('between')?.value).toBe('Taxiway A')
         expect(component['taxiwayLocationForm'].get('and')?.value).toBe(undefined)
@@ -475,6 +516,7 @@ describe('TaxiwayLocationComponent', () => {
     it('should render form template without errors', () => {
         fixture.componentRef.setInput('model', null)
         fixture.detectChanges()
+        setupUpdateValueAndValiditySpies()
 
         const compiled = fixture.nativeElement as HTMLElement
         expect(compiled).toBeTruthy()
