@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing'
+import { ComponentFixture, TestBed, fakeAsync, tick, flush } from '@angular/core/testing'
 import { FormControl, FormGroup, FormGroupDirective, ReactiveFormsModule, Validators } from '@angular/forms'
 import { NoopAnimationsModule } from '@angular/platform-browser/animations'
 import { of } from 'rxjs'
@@ -7,7 +7,7 @@ import { PartialClosureModel } from '../../models'
 import { LookupCacheStore } from '../../store/lookup-cache-store'
 import { FaaNotamModel } from '../../models'
 
-fdescribe('TaxiwayLocationComponent', () => {
+describe('TaxiwayLocationComponent', () => {
     let component: TaxiwayLocationComponent
     let fixture: ComponentFixture<TaxiwayLocationComponent>
     let mockLookupCacheStore: jasmine.SpyObj<LookupCacheStore>
@@ -56,14 +56,17 @@ fdescribe('TaxiwayLocationComponent', () => {
         component = fixture.componentInstance
     })
 
-    it('should create', () => {
+    it('should create', fakeAsync(() => {
+        fixture.componentRef.setInput('model', null)
+        fixture.detectChanges()
+        flush() // Flush all pending async operations to prevent infinite loop
         expect(component).toBeTruthy()
-    })
+    }))
 
     it('should initialize form on ngOnInit', fakeAsync(() => {
         fixture.componentRef.setInput('model', null)
         fixture.detectChanges()
-        tick() // Flush pending async operations to prevent infinite loop
+        flush() // Flush all pending async operations to prevent infinite loop
 
         expect(component['taxiwayLocationForm']).toBeDefined()
         expect(component['taxiwayLocationForm'].get('between')).toBeDefined()
@@ -85,7 +88,7 @@ fdescribe('TaxiwayLocationComponent', () => {
 
         fixture.componentRef.setInput('model', mockModel)
         fixture.detectChanges()
-        tick() // Flush pending async operations to prevent infinite loop
+        flush() // Flush all pending async operations to prevent infinite loop
 
         expect(component['taxiwayLocationForm'].get('between')?.value).toBe('Taxiway A')
         expect(component['taxiwayLocationForm'].get('and')?.value).toBe('Taxiway B')
@@ -96,7 +99,7 @@ fdescribe('TaxiwayLocationComponent', () => {
         
         expect(() => {
             fixture.detectChanges()
-            tick() // Flush pending async operations to prevent infinite loop
+            flush() // Flush all pending async operations to prevent infinite loop
         }).not.toThrow()
 
         expect(component['taxiwayLocationForm'].get('between')?.value).toBe('')
@@ -110,7 +113,7 @@ fdescribe('TaxiwayLocationComponent', () => {
 
         fixture.componentRef.setInput('model', mockModel)
         fixture.detectChanges()
-        tick() // Flush pending async operations to prevent infinite loop
+        flush() // Flush all pending async operations to prevent infinite loop
 
         expect(component['taxiwayLocationForm'].get('between')?.value).toBe(undefined)
         expect(component['taxiwayLocationForm'].get('and')?.value).toBe(undefined)
@@ -124,7 +127,7 @@ fdescribe('TaxiwayLocationComponent', () => {
 
         fixture.componentRef.setInput('model', null)
         fixture.detectChanges()
-        tick() // Flush pending async operations to prevent infinite loop
+        flush() // Flush all pending async operations to prevent infinite loop
 
         expect(mockLookupCacheStore.fetchPartialLocations).toHaveBeenCalledWith({
             keyword: 'test',
@@ -132,28 +135,32 @@ fdescribe('TaxiwayLocationComponent', () => {
         })
     }))
 
-    it('should initialize partialClosureLocation$ observable', (done) => {
+    it('should initialize partialClosureLocation$ observable', fakeAsync(() => {
         fixture.componentRef.setInput('model', null)
         fixture.detectChanges()
+        flush() // Flush all pending async operations to prevent infinite loop
 
-        component.partialClosureLocation$.subscribe((locations: PartialClosureModel[]) => {
-            expect(locations.length).toBe(2)
-            expect(locations[0].name).toBe('Taxiway A')
-            expect(locations[1].name).toBe('Taxiway B')
-            done()
+        let locations: PartialClosureModel[] = []
+        component.partialClosureLocation$.subscribe((loc: PartialClosureModel[]) => {
+            locations = loc
         })
-    })
+        flush() // Flush subscription
+
+        expect(locations.length).toBe(2)
+        expect(locations[0].name).toBe('Taxiway A')
+        expect(locations[1].name).toBe('Taxiway B')
+    }))
 
     it('should set validators when between has value', fakeAsync(() => {
         fixture.componentRef.setInput('model', null)
         fixture.detectChanges()
-        tick() // Flush pending async operations to prevent infinite loop
+        flush() // Flush all pending async operations to prevent infinite loop
 
         component['taxiwayLocationForm'].patchValue({
             between: 'Taxiway A',
             and: ''
         })
-        tick() // Flush pending async operations after patchValue
+        flush() // Flush all pending async operations after patchValue
 
         const betweenControl = component['taxiwayLocationForm'].get('between')
         const andControl = component['taxiwayLocationForm'].get('and')
@@ -165,13 +172,13 @@ fdescribe('TaxiwayLocationComponent', () => {
     it('should set validators when and has value', fakeAsync(() => {
         fixture.componentRef.setInput('model', null)
         fixture.detectChanges()
-        tick() // Flush pending async operations to prevent infinite loop
+        flush() // Flush all pending async operations to prevent infinite loop
 
         component['taxiwayLocationForm'].patchValue({
             between: '',
             and: 'Taxiway B'
         })
-        tick() // Flush pending async operations after patchValue
+        flush() // Flush all pending async operations after patchValue
 
         const betweenControl = component['taxiwayLocationForm'].get('between')
         const andControl = component['taxiwayLocationForm'].get('and')
@@ -183,13 +190,13 @@ fdescribe('TaxiwayLocationComponent', () => {
     it('should set validators when both between and and have values', fakeAsync(() => {
         fixture.componentRef.setInput('model', null)
         fixture.detectChanges()
-        tick() // Flush pending async operations to prevent infinite loop
+        flush() // Flush all pending async operations to prevent infinite loop
 
         component['taxiwayLocationForm'].patchValue({
             between: 'Taxiway A',
             and: 'Taxiway B'
         })
-        tick() // Flush pending async operations after patchValue
+        flush() // Flush all pending async operations after patchValue
 
         const betweenControl = component['taxiwayLocationForm'].get('between')
         const andControl = component['taxiwayLocationForm'].get('and')
@@ -201,19 +208,19 @@ fdescribe('TaxiwayLocationComponent', () => {
     it('should clear validators when both between and and are empty', fakeAsync(() => {
         fixture.componentRef.setInput('model', null)
         fixture.detectChanges()
-        tick() // Flush pending async operations to prevent infinite loop
+        flush() // Flush all pending async operations to prevent infinite loop
 
         component['taxiwayLocationForm'].patchValue({
             between: 'Taxiway A',
             and: 'Taxiway B'
         })
-        tick() // Flush pending async operations after patchValue
+        flush() // Flush all pending async operations after patchValue
 
         component['taxiwayLocationForm'].patchValue({
             between: '',
             and: ''
         })
-        tick() // Flush pending async operations after patchValue
+        flush() // Flush all pending async operations after patchValue
 
         const betweenControl = component['taxiwayLocationForm'].get('between')
         const andControl = component['taxiwayLocationForm'].get('and')
@@ -227,7 +234,7 @@ fdescribe('TaxiwayLocationComponent', () => {
     it('should remove taxiwayLocation control from scenarioData on ngOnDestroy', fakeAsync(() => {
         fixture.componentRef.setInput('model', null)
         fixture.detectChanges()
-        tick() // Flush pending async operations to prevent infinite loop
+        flush() // Flush all pending async operations to prevent infinite loop
 
         const scenarioData = parentForm.get('scenarioData') as FormGroup
         expect(scenarioData.get('taxiwayLocation')).toBeDefined()
@@ -240,14 +247,14 @@ fdescribe('TaxiwayLocationComponent', () => {
     it('should unsubscribe from form valueChanges on component destroy', fakeAsync(() => {
         fixture.componentRef.setInput('model', null)
         fixture.detectChanges()
-        tick() // Flush pending async operations to prevent infinite loop
+        flush() // Flush all pending async operations to prevent infinite loop
 
         // Verify validators work before destroy
         component['taxiwayLocationForm'].patchValue({
             between: 'Taxiway A',
             and: ''
         })
-        tick() // Flush pending async operations after patchValue
+        flush() // Flush all pending async operations after patchValue
         expect(component['taxiwayLocationForm'].get('and')?.hasError('required')).toBe(true)
 
         fixture.destroy()
@@ -280,7 +287,7 @@ fdescribe('TaxiwayLocationComponent', () => {
 
         fixture.componentRef.setInput('model', mockModel)
         fixture.detectChanges()
-        tick() // Flush pending async operations to prevent infinite loop
+        flush() // Flush all pending async operations to prevent infinite loop
 
         expect(component['taxiwayLocationForm'].get('between')?.value).toBe('Taxiway A')
         expect(component['taxiwayLocationForm'].get('and')?.value).toBe(undefined)
@@ -289,7 +296,7 @@ fdescribe('TaxiwayLocationComponent', () => {
     it('should have correct form control names', fakeAsync(() => {
         fixture.componentRef.setInput('model', null)
         fixture.detectChanges()
-        tick() // Flush pending async operations to prevent infinite loop
+        flush() // Flush all pending async operations to prevent infinite loop
 
         const formControls = Object.keys(component['taxiwayLocationForm'].controls)
         expect(formControls).toContain('between')
@@ -300,13 +307,13 @@ fdescribe('TaxiwayLocationComponent', () => {
     it('should update form values when manually set', fakeAsync(() => {
         fixture.componentRef.setInput('model', null)
         fixture.detectChanges()
-        tick() // Flush pending async operations to prevent infinite loop
+        flush() // Flush all pending async operations to prevent infinite loop
 
         component['taxiwayLocationForm'].patchValue({
             between: 'Taxiway C',
             and: 'Taxiway D'
         })
-        tick() // Flush pending async operations after patchValue
+        flush() // Flush all pending async operations after patchValue
 
         expect(component['taxiwayLocationForm'].get('between')?.value).toBe('Taxiway C')
         expect(component['taxiwayLocationForm'].get('and')?.value).toBe('Taxiway D')
@@ -315,7 +322,7 @@ fdescribe('TaxiwayLocationComponent', () => {
     it('should maintain form validity state when validators are applied', fakeAsync(() => {
         fixture.componentRef.setInput('model', null)
         fixture.detectChanges()
-        tick() // Flush pending async operations to prevent infinite loop
+        flush() // Flush all pending async operations to prevent infinite loop
 
         // Initially form should be valid (no validators)
         expect(component['taxiwayLocationForm'].valid).toBe(true)
@@ -325,7 +332,7 @@ fdescribe('TaxiwayLocationComponent', () => {
             between: 'Taxiway A',
             and: ''
         })
-        tick() // Flush pending async operations after patchValue
+        flush() // Flush all pending async operations after patchValue
 
         expect(component['taxiwayLocationForm'].valid).toBe(false)
 
@@ -334,7 +341,7 @@ fdescribe('TaxiwayLocationComponent', () => {
             between: 'Taxiway A',
             and: 'Taxiway B'
         })
-        tick() // Flush pending async operations after patchValue
+        flush() // Flush all pending async operations after patchValue
 
         expect(component['taxiwayLocationForm'].valid).toBe(true)
     }))
@@ -351,7 +358,7 @@ fdescribe('TaxiwayLocationComponent', () => {
 
         fixture.componentRef.setInput('model', mockModel)
         fixture.detectChanges()
-        tick() // Flush pending async operations to prevent infinite loop
+        flush() // Flush all pending async operations to prevent infinite loop
 
         expect(component['taxiwayLocationForm'].get('between')?.value).toBe('')
         expect(component['taxiwayLocationForm'].get('and')?.value).toBe('')
@@ -360,13 +367,13 @@ fdescribe('TaxiwayLocationComponent', () => {
     it('should correctly integrate with parent form', fakeAsync(() => {
         fixture.componentRef.setInput('model', null)
         fixture.detectChanges()
-        tick() // Flush pending async operations to prevent infinite loop
+        flush() // Flush all pending async operations to prevent infinite loop
 
         component['taxiwayLocationForm'].patchValue({
             between: 'Taxiway E',
             and: 'Taxiway F'
         })
-        tick() // Flush pending async operations after patchValue
+        flush() // Flush all pending async operations after patchValue
 
         const scenarioData = parentForm.get('scenarioData') as FormGroup
         const taxiwayLocation = scenarioData.get('taxiwayLocation') as FormGroup
@@ -378,7 +385,7 @@ fdescribe('TaxiwayLocationComponent', () => {
     it('should render form template without errors', fakeAsync(() => {
         fixture.componentRef.setInput('model', null)
         fixture.detectChanges()
-        tick() // Flush pending async operations to prevent infinite loop
+        flush() // Flush all pending async operations to prevent infinite loop
 
         const compiled = fixture.nativeElement as HTMLElement
         expect(compiled.querySelector('form') || compiled.querySelector('div')).toBeTruthy()
@@ -387,7 +394,7 @@ fdescribe('TaxiwayLocationComponent', () => {
     it('should handle valueChanges subscription correctly', fakeAsync(() => {
         fixture.componentRef.setInput('model', null)
         fixture.detectChanges()
-        tick() // Flush pending async operations to prevent infinite loop
+        flush() // Flush all pending async operations to prevent infinite loop
 
         // Initially no validators
         const betweenControl = component['taxiwayLocationForm'].get('between')
@@ -400,7 +407,7 @@ fdescribe('TaxiwayLocationComponent', () => {
             between: 'Taxiway A',
             and: ''
         })
-        tick() // Flush pending async operations after patchValue
+        flush() // Flush all pending async operations after patchValue
 
         expect(betweenControl?.hasError('required')).toBe(false)
         expect(andControl?.hasError('required')).toBe(true)
@@ -410,7 +417,7 @@ fdescribe('TaxiwayLocationComponent', () => {
             between: '',
             and: ''
         })
-        tick() // Flush pending async operations after patchValue
+        flush() // Flush all pending async operations after patchValue
 
         expect(betweenControl?.hasError('required')).toBe(false)
         expect(andControl?.hasError('required')).toBe(false)
