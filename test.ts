@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed, fakeAsync, tick, flush, discardPeriodicTasks } from '@angular/core/testing'
+import { ComponentFixture, TestBed } from '@angular/core/testing'
 import { FormControl, FormGroup, FormGroupDirective, ReactiveFormsModule, Validators } from '@angular/forms'
 import { NoopAnimationsModule } from '@angular/platform-browser/animations'
 import { Subject, of } from 'rxjs'
@@ -60,32 +60,77 @@ describe('TaxiwayLocationComponent', () => {
         })
         mockFormGroupDirective.form = parentForm
         
+        // Create new fixture for each test
         fixture = TestBed.createComponent(TaxiwayLocationComponent)
         component = fixture.componentInstance
     })
 
     afterEach(() => {
-        if (fixture && !fixture.destroy) {
+        if (fixture && !fixture.destroyed) {
             try {
-                // Check if control was already removed (manual ngOnDestroy was called)
-                const scenarioData = parentForm?.get('scenarioData') as FormGroup
-                if (scenarioData) {
-                    const controlExists = scenarioData.get('taxiwayLocation')
-                    
-                    // If control doesn't exist, it means ngOnDestroy was already called manually
-                    // In this case, we need to restore the form structure before destroy
-                    if (!controlExists && component && component['taxiwayLocationForm']) {
-                        try {
-                            scenarioData.addControl('taxiwayLocation', component['taxiwayLocationForm'])
-                        } catch (e) {
-                            // Control might already exist or form might be in invalid state
+                // First, ensure component is initialized before cleanup
+                if (component) {
+                    // Disable form controls to prevent events during cleanup
+                    try {
+                        if (component['taxiwayLocationForm']) {
+                            const between = component['taxiwayLocationForm'].get('between')
+                            const and = component['taxiwayLocationForm'].get('and')
+                            
+                            if (between) {
+                                between.disable({ emitEvent: false })
+                            }
+                            if (and) {
+                                and.disable({ emitEvent: false })
+                            }
                         }
+                    } catch (e) {
+                        // Form might already be destroyed
                     }
                 }
                 
+                // Check if control was already removed (manual ngOnDestroy was called)
+                const scenarioData = parentForm?.get('scenarioData') as FormGroup
+                if (scenarioData) {
+                    try {
+                        const controlExists = scenarioData.get('taxiwayLocation')
+                        
+                        // If control doesn't exist, it means ngOnDestroy was already called manually
+                        // In this case, we need to restore the form structure before destroy
+                        if (!controlExists && component && component['taxiwayLocationForm']) {
+                            try {
+                                scenarioData.addControl('taxiwayLocation', component['taxiwayLocationForm'])
+                            } catch (e) {
+                                // Control might already exist or form might be in invalid state
+                            }
+                        }
+                    } catch (e) {
+                        // ScenarioData might be in invalid state
+                    }
+                }
+                
+                // Destroy the fixture which will trigger ngOnDestroy and clean up subscriptions
                 fixture.destroy()
+                
+                // Clear component reference to prevent access after destruction
+                component = null as any
             } catch (e) {
-                // Ignore errors during cleanup - fixture.destroy() will call ngOnDestroy automatically
+                // Ignore errors during cleanup - try to destroy fixture anyway
+                try {
+                    if (fixture && !fixture.destroyed) {
+                        fixture.destroy()
+                    }
+                } catch (destroyError) {
+                    // Ignore destroy errors
+                }
+            }
+        }
+        
+        // Clear any pending async operations
+        if (partialClosureLocationSubject && !partialClosureLocationSubject.closed) {
+            try {
+                partialClosureLocationSubject.complete()
+            } catch (e) {
+                // Ignore errors
             }
         }
     })
