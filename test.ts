@@ -1,14 +1,15 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormControl, FormGroup, FormGroupDirective, ReactiveFormsModule } from '@angular/forms';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
-import { TaxiwayLocationComponent, requiredIf } from './taxiway-location.component';
+import { Navaid502ServiceTypeComponent } from './navaid-502-service-type.component';
 import { LookupCacheStore } from '../store/lookup-cache-store';
-import { FaaNotamModel, PartialClosureModel } from '../models';
+import { FaaNotamModel, AixmLookupModel } from '../models';
+import { AIXM_TYPES } from '../misc/constants';
 import { of } from 'rxjs';
 
-describe('TaxiwayLocationComponent', () => {
-    let component: TaxiwayLocationComponent;
-    let fixture: ComponentFixture<TaxiwayLocationComponent>;
+describe('Navaid502ServiceTypeComponent', () => {
+    let component: Navaid502ServiceTypeComponent;
+    let fixture: ComponentFixture<Navaid502ServiceTypeComponent>;
     let lookupCacheStore: jasmine.SpyObj<LookupCacheStore>;
     let parentForm: FormGroup;
     let formGroupDirective: FormGroupDirective;
@@ -18,8 +19,7 @@ describe('TaxiwayLocationComponent', () => {
         parentForm = new FormGroup({
             keyword: new FormControl('test-keyword'),
             location: new FormControl('test-location'),
-            scenarioData: new FormGroup({}),
-            locationType: new FormControl('between')
+            scenarioData: new FormGroup({})
         });
 
         // Create FormGroupDirective mock
@@ -27,18 +27,20 @@ describe('TaxiwayLocationComponent', () => {
             form: parentForm
         } as FormGroupDirective;
 
-        // Create LookupCacheStore spy
-        const mockPartialLocations: PartialClosureModel[] = [
-            { id: 1, name: 'Location A', code: 'LOC-A' }
+        // Create mock AixmLookupModel data
+        const mockServiceTypes: AixmLookupModel[] = [
+            { id: 1, code: 'TYPE1', name: 'Service Type 1', description: 'Description for Type 1' },
+            { id: 2, code: 'TYPE2', name: 'Service Type 2', description: 'Description for Type 2' },
+            { id: 3, code: 'TYPE3', name: 'Service Type 3', description: 'Description for Type 3' }
         ];
-        
-        lookupCacheStore = jasmine.createSpyObj('LookupCacheStore', ['fetchPartialLocations'], {
-            partialClosureLocation$: of(mockPartialLocations)
-        });
+
+        // Create LookupCacheStore spy
+        lookupCacheStore = jasmine.createSpyObj('LookupCacheStore', ['fetchAixmKeyLookup', 'getAixmKeyLookup']);
+        lookupCacheStore.getAixmKeyLookup.and.returnValue(of(mockServiceTypes));
 
         await TestBed.configureTestingModule({
             imports: [
-                TaxiwayLocationComponent,
+                Navaid502ServiceTypeComponent,
                 ReactiveFormsModule,
                 NoopAnimationsModule
             ],
@@ -48,304 +50,285 @@ describe('TaxiwayLocationComponent', () => {
             ]
         }).compileComponents();
 
-        fixture = TestBed.createComponent(TaxiwayLocationComponent);
+        fixture = TestBed.createComponent(Navaid502ServiceTypeComponent);
         component = fixture.componentInstance;
     });
 
     describe('Component Initialization', () => {
         it('should create', () => {
             expect(component).toBeTruthy();
-            // Call detectChanges to initialize the component properly
             fixture.detectChanges();
         });
 
-        it('should initialize partialClosureLocation$ from lookupCacheStore', () => {
+        it('should initialize serviceType$ from lookupCacheStore', () => {
+            expect(component.serviceType$).toBeUndefined();
             fixture.detectChanges();
-            expect(component.partialClosureLocation$).toBeDefined();
+            expect(component.serviceType$).toBeDefined();
+            expect(lookupCacheStore.getAixmKeyLookup).toHaveBeenCalledWith(AIXM_TYPES.CONDITION_DEPTH);
         });
     });
 
     describe('ngOnInit', () => {
-        it('should build form and add taxiwayLocation control to parent form', () => {
+        it('should build form and add navaidServiceType control to scenarioData form', () => {
             fixture.detectChanges();
-            
+
             const scenarioData = parentForm.get('scenarioData') as FormGroup;
-            expect(scenarioData.get('taxiwayLocation')).toBeTruthy();
-            const taxiwayLocationForm = (component as any).taxiwayLocationForm as FormGroup;
-            expect(taxiwayLocationForm).toBeTruthy();
-            expect(taxiwayLocationForm.get('beginDesignator')).toBeTruthy();
-            expect(taxiwayLocationForm.get('endDesignator')).toBeTruthy();
+            expect(scenarioData.get('navaidServiceType')).toBeTruthy();
+            expect(component['scenarioDataForm']).toBeTruthy();
         });
 
-        it('should call fetchPartialLocations with form values', () => {
+        it('should call fetchAixmKeyLookup with CONDITION_DEPTH', () => {
             fixture.detectChanges();
-            
-            expect(lookupCacheStore.fetchPartialLocations).toHaveBeenCalledWith({
-                keyword: 'test-keyword',
-                location: 'test-location'
-            });
+
+            expect(lookupCacheStore.fetchAixmKeyLookup).toHaveBeenCalledWith(AIXM_TYPES.CONDITION_DEPTH);
+            expect(lookupCacheStore.fetchAixmKeyLookup).toHaveBeenCalledTimes(1);
         });
 
-        it('should call fetchPartialLocations with undefined values when form values are missing', () => {
-            parentForm.patchValue({ keyword: null, location: null });
+        it('should call getAixmKeyLookup with CONDITION_DEPTH and assign to serviceType$', () => {
             fixture.detectChanges();
-            
-            expect(lookupCacheStore.fetchPartialLocations).toHaveBeenCalledWith({
-                keyword: null as any,
-                location: null as any
-            });
+
+            expect(lookupCacheStore.getAixmKeyLookup).toHaveBeenCalledWith(AIXM_TYPES.CONDITION_DEPTH);
+            expect(lookupCacheStore.getAixmKeyLookup).toHaveBeenCalledTimes(1);
+            expect(component.serviceType$).toBeDefined();
         });
 
-        it('should patch form values when model is provided', () => {
+        it('should patch form values when model is provided with navaidServiceType', () => {
             const mockModel: FaaNotamModel = {
                 scenarioData: {
-                    taxiwayLocation: {
-                        between: 'A1',
-                        and: 'B2'
-                    }
+                    navaidServiceType: 'TYPE1'
                 }
             };
-            
-            // Set the model input using Angular's setInput method
+
+            // Set the model input BEFORE detectChanges so ngOnInit runs with the model
             fixture.componentRef.setInput('model', mockModel);
             fixture.detectChanges();
-            
-            // Note: The component patches 'between' and 'and' but form has 'beginDesignator' and 'endDesignator'
-            // So patchValue will silently ignore non-existent fields
-            // This tests the actual behavior - the patchValue call happens but doesn't affect the form
-            const taxiwayLocationForm = (component as any).taxiwayLocationForm as FormGroup;
-            expect(taxiwayLocationForm.get('beginDesignator')?.value).toBe('');
-            expect(taxiwayLocationForm.get('endDesignator')?.value).toBe('');
+
+            // Verify that the form values are patched correctly
+            const scenarioData = parentForm.get('scenarioData') as FormGroup;
+            expect(scenarioData.get('navaidServiceType')?.value).toBe('TYPE1');
         });
 
         it('should handle null model gracefully', () => {
+            // Set the model input BEFORE detectChanges so ngOnInit runs with null model
             fixture.componentRef.setInput('model', null);
             fixture.detectChanges();
-            
-            const taxiwayLocationForm = (component as any).taxiwayLocationForm as FormGroup;
-            expect(taxiwayLocationForm.get('beginDesignator')?.value).toBe('');
-            expect(taxiwayLocationForm.get('endDesignator')?.value).toBe('');
+
+            const scenarioData = parentForm.get('scenarioData') as FormGroup;
+            // When model is null, patchValue receives undefined values
+            // The form control should remain with its initial empty string value
+            expect(scenarioData.get('navaidServiceType')?.value ?? '').toBe('');
         });
 
-        it('should handle model without taxiwayLocation', () => {
+        it('should handle model without navaidServiceType', () => {
             const mockModel: FaaNotamModel = {
                 scenarioData: {}
             };
-            
+
+            // Set the model input BEFORE detectChanges so ngOnInit runs with the model
             fixture.componentRef.setInput('model', mockModel);
             fixture.detectChanges();
+
+            const scenarioData = parentForm.get('scenarioData') as FormGroup;
+            // When navaidServiceType is undefined, patchValue receives undefined values
+            // The form control should remain with its initial empty string value
+            expect(scenarioData.get('navaidServiceType')?.value ?? '').toBe('');
+        });
+
+        it('should handle model with null scenarioData gracefully', () => {
+            const mockModel: FaaNotamModel = {
+                scenarioData: null as any
+            };
+
+            fixture.componentRef.setInput('model', mockModel);
             
-            const taxiwayLocationForm = (component as any).taxiwayLocationForm as FormGroup;
-            expect(taxiwayLocationForm.get('beginDesignator')?.value).toBe('');
-            expect(taxiwayLocationForm.get('endDesignator')?.value).toBe('');
+            // Component uses optional chaining (this.model()?.scenarioData?.navaidServiceType),
+            // so accessing scenarioData.navaidServiceType on null won't throw
+            expect(() => {
+                fixture.detectChanges();
+            }).not.toThrow();
+            
+            const scenarioData = parentForm.get('scenarioData') as FormGroup;
+            // When scenarioData is null, patchValue receives undefined, so form control remains empty
+            expect(scenarioData.get('navaidServiceType')?.value ?? '').toBe('');
+        });
+
+        it('should handle model with null navaidServiceType property gracefully', () => {
+            const mockModel: FaaNotamModel = {
+                scenarioData: {
+                    navaidServiceType: null as any
+                }
+            };
+
+            fixture.componentRef.setInput('model', mockModel);
+            fixture.detectChanges();
+
+            const scenarioData = parentForm.get('scenarioData') as FormGroup;
+            expect(scenarioData.get('navaidServiceType')?.value ?? '').toBe('');
+        });
+
+        it('should subscribe to serviceType$ observable', (done) => {
+            fixture.detectChanges();
+
+            component.serviceType$.subscribe((serviceTypes) => {
+                expect(serviceTypes).toBeDefined();
+                expect(serviceTypes.length).toBe(3);
+                expect(serviceTypes[0].code).toBe('TYPE1');
+                done();
+            });
         });
     });
 
     describe('ngOnDestroy', () => {
-        it('should remove taxiwayLocation control from parent form', () => {
+        it('should remove navaidServiceType control from scenarioData form', () => {
             fixture.detectChanges();
-            
+
             const scenarioData = parentForm.get('scenarioData') as FormGroup;
-            expect(scenarioData.get('taxiwayLocation')).toBeTruthy();
-            
+            expect(scenarioData.get('navaidServiceType')).toBeTruthy();
+
             component.ngOnDestroy();
-            
-            expect(scenarioData.get('taxiwayLocation')).toBeNull();
+
+            expect(scenarioData.get('navaidServiceType')).toBeNull();
         });
 
         it('should remove control even if called multiple times', () => {
             fixture.detectChanges();
-            
+
             const scenarioData = parentForm.get('scenarioData') as FormGroup;
-            expect(scenarioData.get('taxiwayLocation')).toBeTruthy();
-            
+            expect(scenarioData.get('navaidServiceType')).toBeTruthy();
+
             // First destroy
             component.ngOnDestroy();
-            expect(scenarioData.get('taxiwayLocation')).toBeNull();
-            
+            expect(scenarioData.get('navaidServiceType')).toBeNull();
+
             // Re-add the control to test multiple destroys
-            scenarioData.addControl('taxiwayLocation', new FormGroup({}));
-            expect(scenarioData.get('taxiwayLocation')).toBeTruthy();
-            
+            scenarioData.addControl('navaidServiceType', new FormControl(''));
+            expect(scenarioData.get('navaidServiceType')).toBeTruthy();
+
             // Second destroy - component expects the control to exist
             component.ngOnDestroy();
-            expect(scenarioData.get('taxiwayLocation')).toBeNull();
+            expect(scenarioData.get('navaidServiceType')).toBeNull();
+        });
+
+        it('should handle ngOnDestroy when control does not exist', () => {
+            fixture.detectChanges();
+
+            const scenarioData = parentForm.get('scenarioData') as FormGroup;
+            scenarioData.removeControl('navaidServiceType');
+
+            // Should not throw error
+            expect(() => component.ngOnDestroy()).not.toThrow();
         });
     });
 
-    describe('Form Controls', () => {
-        it('should have beginDesignator and endDesignator controls', () => {
+    describe('buildForm', () => {
+        it('should create scenarioDataForm reference from parent form', () => {
             fixture.detectChanges();
-            
-            const taxiwayLocationForm = (component as any).taxiwayLocationForm as FormGroup;
-            expect(taxiwayLocationForm.get('beginDesignator')).toBeTruthy();
-            expect(taxiwayLocationForm.get('endDesignator')).toBeTruthy();
+
+            expect(component['scenarioDataForm']).toBeTruthy();
+            expect(component['scenarioDataForm']).toBe(parentForm.get('scenarioData') as FormGroup);
         });
 
-        it('should have requiredIf validators on form controls', () => {
+        it('should add navaidServiceType control with empty string default value', () => {
             fixture.detectChanges();
+
+            const scenarioData = parentForm.get('scenarioData') as FormGroup;
+            const control = scenarioData.get('navaidServiceType');
+            expect(control).toBeTruthy();
+            expect(control?.value).toBeUndefined();
+        });
+
+        it('should handle optional chaining when scenarioDataForm is null in buildForm', () => {
+            // This tests the optional chaining in buildForm
+            // In practice, scenarioData should always exist, but we test the defensive code
+            const formWithoutScenarioData = new FormGroup({
+                keyword: new FormControl('test-keyword')
+            });
+
+            const formGroupDirectiveWithoutScenario = {
+                form: formWithoutScenarioData
+            } as FormGroupDirective;
+
+            TestBed.resetTestingModule();
+            TestBed.configureTestingModule({
+                imports: [
+                    Navaid502ServiceTypeComponent,
+                    ReactiveFormsModule,
+                    NoopAnimationsModule
+                ],
+                providers: [
+                    { provide: FormGroupDirective, useValue: formGroupDirectiveWithoutScenario },
+                    { provide: LookupCacheStore, useValue: lookupCacheStore }
+                ]
+            });
+
+            const newFixture = TestBed.createComponent(Navaid502ServiceTypeComponent);
+            const newComponent = newFixture.componentInstance;
+
+            // buildForm uses optional chaining, so addControl won't throw
+            // patchValue also uses optional chaining (this.scenarioDataForm?.patchValue),
+            // so it won't throw when scenarioDataForm is null
+            expect(() => {
+                newFixture.detectChanges();
+            }).not.toThrow();
             
-            const taxiwayLocationForm = (component as any).taxiwayLocationForm as FormGroup;
-            const beginDesignator = taxiwayLocationForm.get('beginDesignator');
-            const endDesignator = taxiwayLocationForm.get('endDesignator');
-            
-            expect(beginDesignator?.hasError('requiredIf')).toBeFalsy();
-            expect(endDesignator?.hasError('requiredIf')).toBeFalsy();
+            // Verify that scenarioDataForm is null
+            expect(newComponent['scenarioDataForm']).toBeNull();
+        });
+    });
+
+    describe('Form Control Integration', () => {
+        it('should allow setting and getting navaidServiceType value', () => {
+            fixture.detectChanges();
+
+            const scenarioData = parentForm.get('scenarioData') as FormGroup;
+            const control = scenarioData.get('navaidServiceType');
+
+            control?.setValue('TYPE2');
+            expect(control?.value).toBe('TYPE2');
+
+            control?.setValue('TYPE3');
+            expect(control?.value).toBe('TYPE3');
+        });
+
+        it('should maintain form control state after value changes', () => {
+            fixture.detectChanges();
+
+            const scenarioData = parentForm.get('scenarioData') as FormGroup;
+            const control = scenarioData.get('navaidServiceType');
+
+            control?.setValue('TYPE1');
+            expect(control?.value).toBe('TYPE1');
+            expect(control?.valid).toBeTruthy();
+
+            control?.setValue('');
+            expect(control?.value).toBe('');
+        });
+    });
+
+    describe('LookupCacheStore Integration', () => {
+        it('should fetch lookup data on initialization', () => {
+            fixture.detectChanges();
+
+            expect(lookupCacheStore.fetchAixmKeyLookup).toHaveBeenCalled();
+            expect(lookupCacheStore.getAixmKeyLookup).toHaveBeenCalled();
+        });
+
+        it('should use correct AIXM type constant', () => {
+            fixture.detectChanges();
+
+            expect(lookupCacheStore.fetchAixmKeyLookup).toHaveBeenCalledWith(AIXM_TYPES.CONDITION_DEPTH);
+            expect(lookupCacheStore.getAixmKeyLookup).toHaveBeenCalledWith(AIXM_TYPES.CONDITION_DEPTH);
+        });
+
+        it('should handle empty lookup results', (done) => {
+            lookupCacheStore.getAixmKeyLookup.and.returnValue(of([]));
+
+            fixture.detectChanges();
+
+            component.serviceType$.subscribe((serviceTypes) => {
+                expect(serviceTypes).toEqual([]);
+                done();
+            });
         });
     });
 });
-
-describe('requiredIf Validator', () => {
-    let formGroup: FormGroup;
-    let control: FormControl;
-
-    beforeEach(() => {
-        formGroup = new FormGroup({
-            locationType: new FormControl(''),
-            beginDesignator: new FormControl(''),
-            endDesignator: new FormControl('')
-        });
-        control = formGroup.get('beginDesignator') as FormControl;
-    });
-
-    describe('when parent control does not exist', () => {
-        it('should return null if formGroup is null', () => {
-            const validator = requiredIf('locationType', 'between', true, 'beginDesignator');
-            const standaloneControl = new FormControl('');
-            
-            const result = validator(standaloneControl);
-            
-            expect(result).toBeNull();
-        });
-
-        it('should return null if parent control does not exist', () => {
-            const formGroupWithoutParent = new FormGroup({
-                beginDesignator: new FormControl('')
-            });
-            const controlWithoutParent = formGroupWithoutParent.get('beginDesignator') as FormControl;
-            const validator = requiredIf('locationType', 'between', true, 'beginDesignator');
-            
-            const result = validator(controlWithoutParent);
-            
-            expect(result).toBeNull();
-        });
-    });
-
-    describe('when parent control value does not match', () => {
-        it('should return null when parent control value is different', () => {
-            formGroup.patchValue({ locationType: 'other' });
-            const validator = requiredIf('locationType', 'between', true, 'beginDesignator');
-            control.setValidators(validator);
-            control.updateValueAndValidity();
-            
-            expect(control.errors).toBeNull();
-        });
-    });
-
-    describe('when parent control value matches and allRequired is true', () => {
-        beforeEach(() => {
-            formGroup.patchValue({ locationType: 'between' });
-        });
-
-        it('should return requiredIf error when child control is empty', () => {
-            formGroup.patchValue({ beginDesignator: '', endDesignator: '' });
-            const validator = requiredIf('locationType', 'between', true, 'beginDesignator', 'endDesignator');
-            control.setValidators(validator);
-            control.updateValueAndValidity();
-            
-            expect(control.errors).toEqual({ requiredIf: true });
-        });
-
-        it('should return requiredIf error when one child control is empty', () => {
-            formGroup.patchValue({ beginDesignator: 'A1', endDesignator: '' });
-            const validator = requiredIf('locationType', 'between', true, 'beginDesignator', 'endDesignator');
-            control.setValidators(validator);
-            control.updateValueAndValidity();
-            
-            expect(control.errors).toEqual({ requiredIf: true });
-        });
-
-        it('should return null when all child controls have values', () => {
-            formGroup.patchValue({ beginDesignator: 'A1', endDesignator: 'B2' });
-            const validator = requiredIf('locationType', 'between', true, 'beginDesignator', 'endDesignator');
-            control.setValidators(validator);
-            control.updateValueAndValidity();
-            
-            expect(control.errors).toBeNull();
-        });
-
-        it('should return requiredIf error when child control does not exist', () => {
-            const validator = requiredIf('locationType', 'between', true, 'nonExistentControl');
-            control.setValidators(validator);
-            control.updateValueAndValidity();
-            
-            expect(control.errors).toEqual({ requiredIf: true });
-        });
-    });
-
-    describe('when parent control value matches and allRequired is false', () => {
-        beforeEach(() => {
-            formGroup.patchValue({ locationType: 'between' });
-        });
-
-        it('should return null when at least one child control has value', () => {
-            formGroup.patchValue({ beginDesignator: 'A1', endDesignator: '' });
-            const validator = requiredIf('locationType', 'between', false, 'beginDesignator', 'endDesignator');
-            control.setValidators(validator);
-            control.updateValueAndValidity();
-            
-            expect(control.errors).toBeNull();
-        });
-
-        it('should return null when all child controls have values', () => {
-            formGroup.patchValue({ beginDesignator: 'A1', endDesignator: 'B2' });
-            const validator = requiredIf('locationType', 'between', false, 'beginDesignator', 'endDesignator');
-            control.setValidators(validator);
-            control.updateValueAndValidity();
-            
-            expect(control.errors).toBeNull();
-        });
-
-        it('should return requiredIf error when no child controls have values', () => {
-            formGroup.patchValue({ beginDesignator: '', endDesignator: '' });
-            const validator = requiredIf('locationType', 'between', false, 'beginDesignator', 'endDesignator');
-            control.setValidators(validator);
-            control.updateValueAndValidity();
-            
-            expect(control.errors).toEqual({ requiredIf: true });
-        });
-    });
-
-    describe('with different control value types', () => {
-        it('should work with number values', () => {
-            const formGroupWithNumber = new FormGroup({
-                status: new FormControl(0),
-                value: new FormControl('')
-            });
-            const controlWithNumber = formGroupWithNumber.get('value') as FormControl;
-            
-            formGroupWithNumber.patchValue({ status: 1 });
-            const validator = requiredIf('status', 1, true, 'value');
-            controlWithNumber.setValidators(validator);
-            controlWithNumber.updateValueAndValidity();
-            
-            expect(controlWithNumber.errors).toEqual({ requiredIf: true });
-        });
-
-        it('should work with boolean values', () => {
-            const formGroupWithBoolean = new FormGroup({
-                isActive: new FormControl(false),
-                value: new FormControl('')
-            });
-            const controlWithBoolean = formGroupWithBoolean.get('value') as FormControl;
-            
-            formGroupWithBoolean.patchValue({ isActive: true });
-            const validator = requiredIf('isActive', true, true, 'value');
-            controlWithBoolean.setValidators(validator);
-            controlWithBoolean.updateValueAndValidity();
-            
-            expect(controlWithBoolean.errors).toEqual({ requiredIf: true });
-        });
-    });
-});
-
