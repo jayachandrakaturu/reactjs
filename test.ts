@@ -7,7 +7,7 @@ import { FaaNotamModel, AixmLookupModel } from '../models';
 import { AIXM_TYPES } from '../misc/constants';
 import { of } from 'rxjs';
 
-describe('Navaid502ServiceTypeComponent', () => {
+fdescribe('Navaid502ServiceTypeComponent', () => {
     let component: Navaid502ServiceTypeComponent;
     let fixture: ComponentFixture<Navaid502ServiceTypeComponent>;
     let lookupCacheStore: jasmine.SpyObj<LookupCacheStore>;
@@ -332,3 +332,4 @@ describe('Navaid502ServiceTypeComponent', () => {
         });
     });
 });
+
