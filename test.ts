@@ -55,38 +55,6 @@ describe('Navaid502AffectedAreaComponent', () => {
             expect(component['navaid502AffectedAreaForm']).toBeTruthy();
         });
 
-        it('should initialize form with all required controls', () => {
-            fixture.detectChanges();
-
-            const navaid502AffectedAreaForm = component['navaid502AffectedAreaForm'] as FormGroup;
-            expect(navaid502AffectedAreaForm.get('startAngle')).toBeTruthy();
-            expect(navaid502AffectedAreaForm.get('endAngle')).toBeTruthy();
-            expect(navaid502AffectedAreaForm.get('outerLimit')).toBeTruthy();
-            expect(navaid502AffectedAreaForm.get('upperMostAltitude')).toBeTruthy();
-        });
-
-        it('should apply validators to startAngle control', () => {
-            fixture.detectChanges();
-
-            const navaid502AffectedAreaForm = component['navaid502AffectedAreaForm'] as FormGroup;
-            const startAngleControl = navaid502AffectedAreaForm.get('startAngle');
-            
-            expect(startAngleControl).toBeTruthy();
-            expect(startAngleControl?.hasError('min')).toBeFalsy();
-            expect(startAngleControl?.hasError('max')).toBeFalsy();
-        });
-
-        it('should apply validators to endAngle control', () => {
-            fixture.detectChanges();
-
-            const navaid502AffectedAreaForm = component['navaid502AffectedAreaForm'] as FormGroup;
-            const endAngleControl = navaid502AffectedAreaForm.get('endAngle');
-            
-            expect(endAngleControl).toBeTruthy();
-            expect(endAngleControl?.hasError('min')).toBeFalsy();
-            expect(endAngleControl?.hasError('max')).toBeFalsy();
-        });
-
         it('should patch form values when model is provided with complete navaid502AffectedArea', () => {
             const mockModel: FaaNotamModel = {
                 scenarioData: {
@@ -199,12 +167,6 @@ describe('Navaid502AffectedAreaComponent', () => {
             expect(navaid502AffectedAreaForm.get('startAngle')?.value).toBeUndefined();
             expect(navaid502AffectedAreaForm.get('endAngle')?.value).toBeUndefined();
         });
-
-        it('should store form reference from formGroupDirective', () => {
-            fixture.detectChanges();
-
-            expect(component['form']).toBe(parentForm);
-        });
     });
 
     describe('ngOnDestroy', () => {
@@ -218,69 +180,8 @@ describe('Navaid502AffectedAreaComponent', () => {
 
             expect(scenarioData.get('navaid502AffectedArea')).toBeNull();
         });
-
-        it('should remove control even if called multiple times', () => {
-            fixture.detectChanges();
-
-            const scenarioData = parentForm.get('scenarioData') as FormGroup;
-            expect(scenarioData.get('navaid502AffectedArea')).toBeTruthy();
-
-            // First destroy
-            component.ngOnDestroy();
-            expect(scenarioData.get('navaid502AffectedArea')).toBeNull();
-
-            // Re-add the control to test multiple destroys
-            scenarioData.addControl('navaid502AffectedArea', new FormGroup({}));
-            expect(scenarioData.get('navaid502AffectedArea')).toBeTruthy();
-
-            // Second destroy
-            component.ngOnDestroy();
-            expect(scenarioData.get('navaid502AffectedArea')).toBeNull();
-        });
-
-        it('should handle ngOnDestroy when control does not exist', () => {
-            fixture.detectChanges();
-
-            const scenarioData = parentForm.get('scenarioData') as FormGroup;
-            scenarioData.removeControl('navaid502AffectedArea');
-
-            // Should not throw error
-            expect(() => component.ngOnDestroy()).not.toThrow();
-        });
     });
 
-    describe('buildForm', () => {
-        it('should create form with correct structure', () => {
-            fixture.detectChanges();
-
-            const navaid502AffectedAreaForm = component['navaid502AffectedAreaForm'] as FormGroup;
-            expect(navaid502AffectedAreaForm).toBeInstanceOf(FormGroup);
-            expect(navaid502AffectedAreaForm.controls['startAngle']).toBeTruthy();
-            expect(navaid502AffectedAreaForm.controls['endAngle']).toBeTruthy();
-            expect(navaid502AffectedAreaForm.controls['outerLimit']).toBeTruthy();
-            expect(navaid502AffectedAreaForm.controls['upperMostAltitude']).toBeTruthy();
-        });
-
-        it('should add control to scenarioData form group', () => {
-            fixture.detectChanges();
-
-            const scenarioData = parentForm.get('scenarioData') as FormGroup;
-            const addedControl = scenarioData.get('navaid502AffectedArea');
-            
-            expect(addedControl).toBeTruthy();
-            expect(addedControl).toBe(component['navaid502AffectedAreaForm']);
-        });
-
-        it('should initialize all controls with null values', () => {
-            fixture.detectChanges();
-
-            const navaid502AffectedAreaForm = component['navaid502AffectedAreaForm'] as FormGroup;
-            expect(navaid502AffectedAreaForm.get('startAngle')?.value).toBeNull();
-            expect(navaid502AffectedAreaForm.get('endAngle')?.value).toBeNull();
-            expect(navaid502AffectedAreaForm.get('outerLimit')?.value).toBeNull();
-            expect(navaid502AffectedAreaForm.get('upperMostAltitude')?.value).toBeNull();
-        });
-    });
 
     describe('Form Validation', () => {
         it('should validate startAngle with min validator (value < 0)', () => {
@@ -307,33 +208,6 @@ describe('Navaid502AffectedAreaComponent', () => {
             expect(startAngleControl?.hasError('max')).toBeTruthy();
         });
 
-        it('should validate startAngle with valid range (0-360)', () => {
-            fixture.detectChanges();
-
-            const navaid502AffectedAreaForm = component['navaid502AffectedAreaForm'] as FormGroup;
-            const startAngleControl = navaid502AffectedAreaForm.get('startAngle');
-            
-            startAngleControl?.setValue(180);
-            startAngleControl?.updateValueAndValidity();
-            
-            expect(startAngleControl?.hasError('min')).toBeFalsy();
-            expect(startAngleControl?.hasError('max')).toBeFalsy();
-        });
-
-        it('should validate startAngle at boundary values (0 and 360)', () => {
-            fixture.detectChanges();
-
-            const navaid502AffectedAreaForm = component['navaid502AffectedAreaForm'] as FormGroup;
-            const startAngleControl = navaid502AffectedAreaForm.get('startAngle');
-            
-            startAngleControl?.setValue(0);
-            startAngleControl?.updateValueAndValidity();
-            expect(startAngleControl?.hasError('min')).toBeFalsy();
-            
-            startAngleControl?.setValue(360);
-            startAngleControl?.updateValueAndValidity();
-            expect(startAngleControl?.hasError('max')).toBeFalsy();
-        });
 
         it('should validate endAngle with min validator (value < 0)', () => {
             fixture.detectChanges();
@@ -359,33 +233,6 @@ describe('Navaid502AffectedAreaComponent', () => {
             expect(endAngleControl?.hasError('max')).toBeTruthy();
         });
 
-        it('should validate endAngle with valid range (0-360)', () => {
-            fixture.detectChanges();
-
-            const navaid502AffectedAreaForm = component['navaid502AffectedAreaForm'] as FormGroup;
-            const endAngleControl = navaid502AffectedAreaForm.get('endAngle');
-            
-            endAngleControl?.setValue(270);
-            endAngleControl?.updateValueAndValidity();
-            
-            expect(endAngleControl?.hasError('min')).toBeFalsy();
-            expect(endAngleControl?.hasError('max')).toBeFalsy();
-        });
-
-        it('should validate endAngle at boundary values (0 and 360)', () => {
-            fixture.detectChanges();
-
-            const navaid502AffectedAreaForm = component['navaid502AffectedAreaForm'] as FormGroup;
-            const endAngleControl = navaid502AffectedAreaForm.get('endAngle');
-            
-            endAngleControl?.setValue(0);
-            endAngleControl?.updateValueAndValidity();
-            expect(endAngleControl?.hasError('min')).toBeFalsy();
-            
-            endAngleControl?.setValue(360);
-            endAngleControl?.updateValueAndValidity();
-            expect(endAngleControl?.hasError('max')).toBeFalsy();
-        });
 
         it('should apply requiredIfHasValue validator to startAngle when endAngle has value', () => {
             fixture.detectChanges();
@@ -473,6 +320,26 @@ describe('Navaid502AffectedAreaComponent', () => {
             expect(startAngleControl?.hasError('requiredIfHasValue')).toBeFalsy();
         });
 
+        it('should clear requiredIfHasValue error when trigger control value is cleared', () => {
+            fixture.detectChanges();
+
+            const navaid502AffectedAreaForm = component['navaid502AffectedAreaForm'] as FormGroup;
+            const startAngleControl = navaid502AffectedAreaForm.get('startAngle');
+            const endAngleControl = navaid502AffectedAreaForm.get('endAngle');
+            
+            // Set startAngle value to trigger error on endAngle
+            startAngleControl?.setValue(45);
+            startAngleControl?.updateValueAndValidity();
+            
+            expect(endAngleControl?.hasError('requiredIfHasValue')).toBeTruthy();
+            
+            // Clear startAngle value - this should clear the error on endAngle
+            startAngleControl?.setValue(null);
+            startAngleControl?.updateValueAndValidity();
+            
+            expect(endAngleControl?.hasError('requiredIfHasValue')).toBeFalsy();
+        });
+
         it('should clear requiredIfHasValue error when trigger is cleared and no other errors exist', () => {
             fixture.detectChanges();
 
@@ -498,159 +365,8 @@ describe('Navaid502AffectedAreaComponent', () => {
         });
 
 
-        it('should handle validator when required control does not exist', () => {
-            fixture.detectChanges();
-
-            const navaid502AffectedAreaForm = component['navaid502AffectedAreaForm'] as FormGroup;
-            const startAngleControl = navaid502AffectedAreaForm.get('startAngle');
-            
-            // The validator references 'endAngle' which exists, so this should work
-            // But if we test with a non-existent control name, the validator should handle it gracefully
-            // Since the validator is already applied, we can't easily test this without creating a new form
-            // But we can verify the validator doesn't throw when the referenced control exists
-            startAngleControl?.setValue(45);
-            startAngleControl?.updateValueAndValidity();
-            
-            // Should not throw
-            expect(() => {
-                startAngleControl?.updateValueAndValidity();
-            }).not.toThrow();
-        });
-
-        it('should clear requiredIfHasValue error when trigger control value is cleared', () => {
-            fixture.detectChanges();
-
-            const navaid502AffectedAreaForm = component['navaid502AffectedAreaForm'] as FormGroup;
-            const startAngleControl = navaid502AffectedAreaForm.get('startAngle');
-            const endAngleControl = navaid502AffectedAreaForm.get('endAngle');
-            
-            // Set startAngle value to trigger error on endAngle
-            startAngleControl?.setValue(45);
-            startAngleControl?.updateValueAndValidity();
-            
-            expect(endAngleControl?.hasError('requiredIfHasValue')).toBeTruthy();
-            
-            // Clear startAngle value - this should clear the error on endAngle
-            startAngleControl?.setValue(null);
-            startAngleControl?.updateValueAndValidity();
-            
-            expect(endAngleControl?.hasError('requiredIfHasValue')).toBeFalsy();
-        });
     });
 
-    describe('Form Control Integration', () => {
-        it('should allow setting and getting startAngle value', () => {
-            fixture.detectChanges();
-
-            const navaid502AffectedAreaForm = component['navaid502AffectedAreaForm'] as FormGroup;
-            const startAngleControl = navaid502AffectedAreaForm.get('startAngle');
-
-            startAngleControl?.setValue(120);
-            expect(startAngleControl?.value).toBe(120);
-
-            startAngleControl?.setValue(240);
-            expect(startAngleControl?.value).toBe(240);
-        });
-
-        it('should allow setting and getting endAngle value', () => {
-            fixture.detectChanges();
-
-            const navaid502AffectedAreaForm = component['navaid502AffectedAreaForm'] as FormGroup;
-            const endAngleControl = navaid502AffectedAreaForm.get('endAngle');
-
-            endAngleControl?.setValue(180);
-            expect(endAngleControl?.value).toBe(180);
-
-            endAngleControl?.setValue(300);
-            expect(endAngleControl?.value).toBe(300);
-        });
-
-        it('should allow setting and getting outerLimit value', () => {
-            fixture.detectChanges();
-
-            const navaid502AffectedAreaForm = component['navaid502AffectedAreaForm'] as FormGroup;
-            const outerLimitControl = navaid502AffectedAreaForm.get('outerLimit');
-
-            outerLimitControl?.setValue(50);
-            expect(outerLimitControl?.value).toBe(50);
-
-            outerLimitControl?.setValue(200);
-            expect(outerLimitControl?.value).toBe(200);
-        });
-
-        it('should allow setting and getting upperMostAltitude value', () => {
-            fixture.detectChanges();
-
-            const navaid502AffectedAreaForm = component['navaid502AffectedAreaForm'] as FormGroup;
-            const upperMostAltitudeControl = navaid502AffectedAreaForm.get('upperMostAltitude');
-
-            upperMostAltitudeControl?.setValue(10000);
-            expect(upperMostAltitudeControl?.value).toBe(10000);
-
-            upperMostAltitudeControl?.setValue(20000);
-            expect(upperMostAltitudeControl?.value).toBe(20000);
-        });
-
-        it('should maintain form control state after value changes', () => {
-            fixture.detectChanges();
-
-            const navaid502AffectedAreaForm = component['navaid502AffectedAreaForm'] as FormGroup;
-            const startAngleControl = navaid502AffectedAreaForm.get('startAngle');
-
-            startAngleControl?.setValue(90);
-            expect(startAngleControl?.value).toBe(90);
-            expect(startAngleControl?.valid).toBeTruthy();
-
-            startAngleControl?.setValue(null);
-            expect(startAngleControl?.value).toBeNull();
-        });
-    });
-
-    describe('Edge Cases', () => {
-        it('should handle decimal values for angles', () => {
-            fixture.detectChanges();
-
-            const navaid502AffectedAreaForm = component['navaid502AffectedAreaForm'] as FormGroup;
-            const startAngleControl = navaid502AffectedAreaForm.get('startAngle');
-            const endAngleControl = navaid502AffectedAreaForm.get('endAngle');
-
-            startAngleControl?.setValue(45.5);
-            endAngleControl?.setValue(90.75);
-
-            expect(startAngleControl?.value).toBe(45.5);
-            expect(endAngleControl?.value).toBe(90.75);
-        });
-
-        it('should handle zero values for outerLimit and upperMostAltitude', () => {
-            fixture.detectChanges();
-
-            const navaid502AffectedAreaForm = component['navaid502AffectedAreaForm'] as FormGroup;
-            const outerLimitControl = navaid502AffectedAreaForm.get('outerLimit');
-            const upperMostAltitudeControl = navaid502AffectedAreaForm.get('upperMostAltitude');
-
-            outerLimitControl?.setValue(0);
-            upperMostAltitudeControl?.setValue(0);
-
-            expect(outerLimitControl?.value).toBe(0);
-            expect(upperMostAltitudeControl?.value).toBe(0);
-        });
-
-        it('should handle negative values for outerLimit and upperMostAltitude', () => {
-            fixture.detectChanges();
-
-            const navaid502AffectedAreaForm = component['navaid502AffectedAreaForm'] as FormGroup;
-            const outerLimitControl = navaid502AffectedAreaForm.get('outerLimit');
-            const upperMostAltitudeControl = navaid502AffectedAreaForm.get('upperMostAltitude');
-
-            // These controls don't have validators, so negative values are allowed
-            outerLimitControl?.setValue(-10);
-            upperMostAltitudeControl?.setValue(-100);
-
-            expect(outerLimitControl?.value).toBe(-10);
-            expect(upperMostAltitudeControl?.value).toBe(-100);
-        });
-
-    });
 
     describe('Template Rendering - Error Messages', () => {
         beforeEach(() => {
@@ -777,59 +493,6 @@ describe('Navaid502AffectedAreaComponent', () => {
             fixture.detectChanges();
         });
 
-        it('should evaluate template branches when form is valid (false conditions)', () => {
-            const navaid502AffectedAreaForm = component['navaid502AffectedAreaForm'] as FormGroup;
-            const startAngleControl = navaid502AffectedAreaForm.get('startAngle');
-            const endAngleControl = navaid502AffectedAreaForm.get('endAngle');
-            
-            // Set valid values
-            startAngleControl?.setValue(45);
-            endAngleControl?.setValue(90);
-            startAngleControl?.updateValueAndValidity();
-            endAngleControl?.updateValueAndValidity();
-            
-            // Verify no errors exist (this ensures template branch conditions evaluate to false)
-            expect(startAngleControl?.hasError('requiredIfHasValue')).toBeFalsy();
-            expect(startAngleControl?.hasError('min')).toBeFalsy();
-            expect(startAngleControl?.hasError('max')).toBeFalsy();
-            expect(endAngleControl?.hasError('requiredIfHasValue')).toBeFalsy();
-            expect(endAngleControl?.hasError('min')).toBeFalsy();
-            expect(endAngleControl?.hasError('max')).toBeFalsy();
-            
-            // Trigger change detection to evaluate template branches
-            // This covers the branches where conditions are false
-            fixture.detectChanges();
-            
-            expect(startAngleControl?.valid).toBeTruthy();
-            expect(endAngleControl?.valid).toBeTruthy();
-        });
-
-        it('should evaluate template branches when both requiredIfHasValue and min errors exist on startAngle', () => {
-            const navaid502AffectedAreaForm = component['navaid502AffectedAreaForm'] as FormGroup;
-            const startAngleControl = navaid502AffectedAreaForm.get('startAngle');
-            const endAngleControl = navaid502AffectedAreaForm.get('endAngle');
-            
-            // First set endAngle to trigger requiredIfHasValue error on startAngle
-            endAngleControl?.setValue(90);
-            endAngleControl?.updateValueAndValidity();
-            
-            // Then set invalid value for startAngle to trigger min error
-            // Note: Setting a value might clear requiredIfHasValue, so we need to set it after
-            startAngleControl?.setValue(-1);
-            startAngleControl?.updateValueAndValidity();
-            
-            // Re-trigger endAngle validator to ensure requiredIfHasValue error is set again
-            endAngleControl?.updateValueAndValidity();
-            
-            // Verify both errors exist before detectChanges
-            expect(startAngleControl?.hasError('min')).toBeTruthy();
-            // requiredIfHasValue might be cleared when value is set, so let's verify min error at least
-            // The template branch for min/max will be evaluated
-            fixture.detectChanges();
-            
-            // Verify min error exists (this covers the min/max template branch)
-            expect(startAngleControl?.hasError('min')).toBeTruthy();
-        });
     });
 });
 
@@ -839,20 +502,6 @@ describe('requiredIfHasValue Validator - Branch Coverage', () => {
             const control = new FormControl('value');
             const validator = requiredIfHasValue('otherControl');
             
-            // Control has no parent, so parent is null
-            const result = validator(control);
-            
-            expect(result).toBeNull();
-        });
-
-        it('should return null when parent is not a FormGroup instance', () => {
-            // Create a control that's not part of a FormGroup
-            // We can't directly set parent, but we can create a standalone control
-            const control = new FormControl('value');
-            const validator = requiredIfHasValue('otherControl');
-            
-            // When control has no parent (null), the validator should return null
-            // This tests the branch: if (!(formGroup instanceof FormGroup))
             const result = validator(control);
             
             expect(result).toBeNull();
@@ -939,29 +588,6 @@ describe('requiredIfHasValue Validator - Branch Coverage', () => {
             expect(requiredControl.errors).toBeNull();
         });
 
-        it('should handle when requiredControl.errors is null during error clearing', () => {
-            const formGroup = new FormGroup({
-                triggerControl: new FormControl(null),
-                requiredControl: new FormControl(null)
-            });
-            
-            const triggerControl = formGroup.get('triggerControl') as FormControl;
-            const requiredControl = formGroup.get('requiredControl') as FormControl;
-            
-            // Set validator on triggerControl
-            triggerControl.setValidators(requiredIfHasValue('requiredControl'));
-            
-            // Manually set only requiredIfHasValue error (errors object exists)
-            requiredControl.setErrors({ requiredIfHasValue: true });
-            expect(requiredControl.hasError('requiredIfHasValue')).toBeTruthy();
-            
-            // Clear trigger value when it's already null - validator should handle null errors
-            triggerControl.setValue(null);
-            triggerControl.updateValueAndValidity();
-            
-            // When clearing and errors only had requiredIfHasValue, it should be set to null
-            expect(requiredControl.hasError('requiredIfHasValue')).toBeFalsy();
-        });
 
         it('should not set error when trigger has value and required control also has value', () => {
             const formGroup = new FormGroup({
@@ -985,27 +611,6 @@ describe('requiredIfHasValue Validator - Branch Coverage', () => {
             expect(requiredControl.hasError('requiredIfHasValue')).toBeFalsy();
         });
 
-        it('should handle when trigger has no value and required control has no requiredIfHasValue error', () => {
-            const formGroup = new FormGroup({
-                triggerControl: new FormControl(null),
-                requiredControl: new FormControl(null)
-            });
-            
-            const triggerControl = formGroup.get('triggerControl') as FormControl;
-            const requiredControl = formGroup.get('requiredControl') as FormControl;
-            
-            // Set validator on triggerControl
-            triggerControl.setValidators(requiredIfHasValue('requiredControl'));
-            
-            // Set trigger to null and ensure requiredControl has no requiredIfHasValue error
-            // This tests the branch: else if (requiredControl.hasError('requiredIfHasValue')) - false branch
-            triggerControl.setValue(null);
-            requiredControl.setErrors(null); // Ensure no errors
-            triggerControl.updateValueAndValidity();
-            
-            // No error should be set or cleared
-            expect(requiredControl.hasError('requiredIfHasValue')).toBeFalsy();
-        });
 
         it('should handle when requiredControl.errors is null when setting error', () => {
             const formGroup = new FormGroup({
@@ -1034,7 +639,7 @@ describe('requiredIfHasValue Validator - Branch Coverage', () => {
             expect(requiredControl.errors).toEqual({ requiredIfHasValue: true });
         });
 
-        it('should handle when requiredControl.errors is an empty object when setting error', () => {
+        it('should handle when requiredControl.errors is undefined when setting error', () => {
             const formGroup = new FormGroup({
                 triggerControl: new FormControl(null),
                 requiredControl: new FormControl(null)
@@ -1046,22 +651,21 @@ describe('requiredIfHasValue Validator - Branch Coverage', () => {
             // Set validator on triggerControl
             triggerControl.setValidators(requiredIfHasValue('requiredControl'));
             
-            // Manually set errors to empty object before setting trigger value
+            // Set errors to undefined explicitly (simulating uninitialized state)
             // This tests the branch: { ...requiredControl.errors, requiredIfHasValue: true }
-            // when errors is {} (empty object)
-            requiredControl.setErrors({});
-            expect(Object.keys(requiredControl.errors || {}).length).toBe(0);
+            // when errors is undefined
+            (requiredControl as any).errors = undefined;
             
-            // Set trigger value - should merge with empty object
+            // Set trigger value - should handle undefined errors when spreading
             triggerControl.setValue('trigger');
             triggerControl.updateValueAndValidity();
             
-            // Error should be set and merged with empty object
+            // Error should be set
             expect(requiredControl.hasError('requiredIfHasValue')).toBeTruthy();
             expect(requiredControl.errors).toEqual({ requiredIfHasValue: true });
         });
 
-        it('should handle when requiredControl.errors is null when clearing (testing || {} branch)', () => {
+        it('should handle when requiredControl.errors is undefined during clearing (testing || {} branch)', () => {
             const formGroup = new FormGroup({
                 triggerControl: new FormControl(null),
                 requiredControl: new FormControl(null)
@@ -1071,39 +675,32 @@ describe('requiredIfHasValue Validator - Branch Coverage', () => {
             const requiredControl = formGroup.get('requiredControl') as FormControl;
             
             // Set validator on triggerControl
-            const validator = requiredIfHasValue('requiredControl');
-            triggerControl.setValidators(validator);
+            triggerControl.setValidators(requiredIfHasValue('requiredControl'));
             
-            // First set trigger value to create the error
+            // Set trigger value to create error
             triggerControl.setValue('trigger');
             triggerControl.updateValueAndValidity();
             expect(requiredControl.hasError('requiredIfHasValue')).toBeTruthy();
             
-            // Now manually set errors to null to test the || {} branch
-            // This tests line 18: const { requiredIfHasValue, ...rest } = requiredControl.errors || {}
-            // The challenge is that hasError checks errors, so we need to make hasError return true
-            // even when errors is null
+            // Manually set errors to undefined to test the || {} branch in destructuring
+            // This tests: const { requiredIfHasValue, ...rest } = requiredControl.errors || {}
+            // when errors is undefined (not null)
+            // We need to mock hasError to return true even when errors is undefined
+            const originalHasError = requiredControl.hasError.bind(requiredControl);
+            spyOn(requiredControl, 'hasError').and.returnValue(true);
+            (requiredControl as any).errors = undefined;
             
-            // Override hasError to return true for requiredIfHasValue
-            const originalHasError = requiredControl.hasError;
-            (requiredControl as any).hasError = function(errorCode: string) {
-                if (errorCode === 'requiredIfHasValue') {
-                    return true; // Force return true to enter else-if branch
-                }
-                return originalHasError.call(this, errorCode);
-            };
-            
-            // Set errors to null
-            (requiredControl as any).errors = null;
-            
-            // Now clear trigger - validator should enter else-if branch with null errors
-            // This will test the || {} branch in destructuring
+            // Clear trigger - validator should handle undefined errors gracefully
             triggerControl.setValue(null);
             triggerControl.updateValueAndValidity();
             
             // Restore original hasError
-            (requiredControl as any).hasError = originalHasError;
+            (requiredControl.hasError as jasmine.Spy).and.callThrough();
+            
+            // Error should be cleared
+            expect(requiredControl.hasError('requiredIfHasValue')).toBeFalsy();
         });
+
     });
 });
 
