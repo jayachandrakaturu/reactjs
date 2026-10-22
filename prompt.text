@@ -1,0 +1,62 @@
+Implement Cypress UI automation for DS310 — Runway Safety Area Status (FAA only), Airport Ops.
+Application scenarioId: RWY022.
+User story: 1033276.
+
+First inspect repository instructions, apps/notam-ui-e2e/README.md, DS37.scenario.ts, DS37.cy.ts, other relevant runway scenarios, the permutation engine, runner, enums, and existing helpers. Read the Angular components for RWY022 to confirm selectors and payload structure. Do not rely only on the current editor file.
+
+Create:
+apps/notam-ui-e2e/e2e/digital-scenarios/runway/DS310.scenario.ts
+apps/notam-ui-e2e/e2e/digital-scenarios/runway/DS310.cy.ts
+
+Follow existing PermutationEngine, helperMap, resolvePayload and runTests conventions. Provide smoke and full suites.
+
+DS310 requirements:
+- Facility location and full runway pair are required. Use valid airport/runway baseline combinations.
+- Safety Area Type is automatically populated as “Safety Area” and readonly. Assert input[formcontrolname="safetyAreaPlainText"]; do not attempt to select or type into it.
+- Operational Status options: Reduced, Work In Progress, Non-Standard, Other.
+- Non-Standard requires Non-Standard Details.
+- Other requires Other Details.
+- Details are not applicable to Reduced or Work In Progress.
+- Location supports eight cardinal directions: North, Northeast, East, Southeast, South, Southwest, West, Northwest.
+- Warning Section options: Edge, End, Side, Touch Down Zone.
+- Cardinal Direction and Warning Section must be supplied together.
+- The requirements sheet also mentions Cardinal Direction being required for Non-Standard, while the business-rules sheet describes the pairing rule. Flag this ambiguity; do not silently invent a rule.
+- Period of Validity is required. Reuse existing validity/date helpers.
+- Schedule and Comments are optional.
+
+Known implementation details:
+- Operational status component selector: app-operational-status.
+- Dropdown control: status.
+- Conditional textarea control: addlNote.
+- Dropdown displays translationPlainText and stores translationAixm.
+- Details use updateOn: 'blur' and uppercase conversion.
+- Changing status resets the previous details.
+- sharedHelpers.enterSignStatus already accepts operationalStatus and nonStandardDetails. Inspect its callers and reuse it if suitable. Ensure details are blurred after typing; preserve compatibility with existing scenarios.
+- A duplicate Location panel is a known issue being fixed. Inspect the intended component and scope selectors appropriately instead of using arbitrary first()/last() workarounds.
+
+Implementation:
+1. Reuse existing runway, location, status and validity helpers wherever suitable.
+2. Add only necessary helpers or enum values.
+3. Keep conditional details fields out of base .values(); use conditionalValues.
+4. Verify final generated cases cover all four statuses, eight directions and four warning sections. Do not assume coverage survives pruning.
+5. Build meaningful expected domestic, ICAO and plain-language preview assertions using existing translation utilities and confirmed DS310 rules:
+   FAA: RWY <designator> SAFETY AREA <status> [<cardinalDirection> <warningSection>] [<note>]
+   Non-Standard translates to NOT STD; Work In Progress to WIP; Reduced to REDUCED; Other uses entered text.
+   Verify exact formatting against authoritative requirements/examples. Report anything that cannot be confirmed.
+6. Check scenario-navigation.ts and test-data/scenario-id-mapping.ts. Add the RWY022 navigation entry and RWY022: 'DS310' mapping only if missing.
+7. Follow the existing JSON export mechanism for generated cases and UI request payloads needed by the AIXM team.
+8. Add focused negative validation cases using existing project patterns where supported. Keep them separate from the successful-preview permutations.
+
+Avoid carrying over DS37 sign fields, runwayEnd, restriction fields or unrelated payload expectations. Do not guess selectors, enum members, baseline data or payload properties.
+
+Do not change application production code, the permutation engine or shared runner. Avoid fixed waits and force:true. Preserve unrelated local changes. Do not stage, commit or push.
+
+Run relevant lint/type checks using repository scripts. If the environment is ready, run the DS310 smoke spec; otherwise report the blocker and exact command to run. Do not submit or cancel real NOTAMs.
+
+Finish with:
+- Files changed and their purpose.
+- Reused/new helpers.
+- Coverage and validation results.
+- Remaining requirement questions.
+- Exact smoke/full execution and JSON export commands based on this repository.
+- Steps to repeat the full suite at least three times and collect reports for the story.
